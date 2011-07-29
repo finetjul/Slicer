@@ -527,13 +527,13 @@ vtkCollection *vtkEventBroker::GetObservationsForObserver ( vtkObject *observer 
 //----------------------------------------------------------------------------
 int vtkEventBroker::GetNumberOfObservations ( )
 {
-  size_t count = 0;
+  int count = 0;
   ObjectToObservationVectorMap::iterator iter; 
   for(iter=this->SubjectMap.begin(); iter != this->SubjectMap.end(); iter++)  
     {
     count += iter->second.size();
     }
-  return static_cast<int>(count);
+  return count;
 }
 
 //----------------------------------------------------------------------------
@@ -544,7 +544,7 @@ vtkObservation *vtkEventBroker::GetNthObservation ( int n )
     return NULL;
     }
 
-  size_t count = 0;
+  int count = 0;
   ObjectToObservationVectorMap::iterator iter; 
   for(iter=this->SubjectMap.begin(); iter != this->SubjectMap.end(); iter++)  
     {
@@ -812,7 +812,7 @@ void vtkEventBroker::QueueObservation ( vtkObservation *observation, void *callD
 //----------------------------------------------------------------------------
 int vtkEventBroker::GetNumberOfQueuedObservations ()
 {
-  return static_cast<int>( this->EventQueue.size() );
+  return( this->EventQueue.size() );
 }
 
 //----------------------------------------------------------------------------
