@@ -43,6 +43,7 @@ public:
   bool                             ShowChildNodeTypes;
   QStringList                      HideChildNodeTypes;
   QStringList                      HiddenNodeIDs;
+  QStringList                      VisibleNodeIDs;
   QString                          HideNodesUnaffiliatedWithNodeID;
   typedef QPair<QString, QVariant> AttributeType;
   QHash<QString, AttributeType>    Attributes;
@@ -184,6 +185,10 @@ bool qMRMLSortFilterProxyModel::filterAcceptsRow(int source_row, const QModelInd
   if (d->HiddenNodeIDs.contains(node->GetID()))
     {
     return false;
+    }
+  if (d->VisibleNodeIDs.contains(node->GetID()))
+    {
+    return true;
     }
   // HideFromEditors property
   if (!d->ShowHidden && node->GetHideFromEditors())
@@ -396,6 +401,25 @@ QStringList qMRMLSortFilterProxyModel::hiddenNodeIDs()const
 {
   Q_D(const qMRMLSortFilterProxyModel);
   return d->HiddenNodeIDs;
+}
+
+// --------------------------------------------------------------------------
+void qMRMLSortFilterProxyModel::setVisibleNodeIDs(const QStringList& nodeIDs)
+{
+  Q_D(qMRMLSortFilterProxyModel);
+  if (nodeIDs == d->VisibleNodeIDs)
+    {
+    return;
+    }
+  d->VisibleNodeIDs = nodeIDs;
+  this->invalidateFilter();
+}
+
+// --------------------------------------------------------------------------
+QStringList qMRMLSortFilterProxyModel::visibleNodeIDs()const
+{
+  Q_D(const qMRMLSortFilterProxyModel);
+  return d->VisibleNodeIDs;
 }
 
 // --------------------------------------------------------------------------
