@@ -19,11 +19,14 @@ Version:   $Revision: 1.2 $
 
 /// SlicerExecutionModel includes
 #include <ModuleDescription.h>
+#include <ModuleParameter.h>
 
 // VTK includes
-#include "vtkObjectFactory.h"
+#include <vtkCommand.h>
+#include <vtkObjectFactory.h>
 
 // STD includes
+#include <cassert>
 #include <sstream>
 
 
@@ -41,6 +44,16 @@ public:
   static ModuleDescriptionMap RegisteredModules;
 
   vtkMRMLCommandLineModuleNode::StatusType Status;
+  /// AutoRun flags
+  int AutoRun;
+  /// Delay in msecs to wait before the module is auto run.
+  unsigned int AutoRunDelay;
+  /// Last time the module was started.
+  vtkTimeStamp LastRunTime;
+  /// Last time a parameter was modified.
+  vtkTimeStamp ParameterMTime;
+  /// Last time an input parameter was modified.
+  vtkTimeStamp InputMTime;
 };
 
 ModuleDescriptionMap vtkMRMLCommandLineModuleNode::vtkInternal::RegisteredModules;
@@ -59,7 +72,10 @@ vtkMRMLCommandLineModuleNode::vtkMRMLCommandLineModuleNode()
 {
   this->Internal = new vtkInternal();
   this->HideFromEditors = true;
-  this->Internal->Status = Idle;
+  this->Internal->Status = vtkMRMLCommandLineModuleNode::Idle;
+  this->Internal->AutoRun =
+    vtkMRMLCommandLineModuleNode::AutoRunWhenParameterChanged;
+  this->Internal->AutoRunDelay = 1000;
 }
 
 //----------------------------------------------------------------------------
@@ -96,6 +112,7 @@ void vtkMRMLCommandLineModuleNode::WriteXML(ostream& of, int nIndent)
   //
   of << " title=\"" << this->URLEncodeString ( module.GetTitle().c_str() ) << "\"";
   of << " version=\"" << this->URLEncodeString ( module.GetVersion().c_str() ) << "\"";
+  of << " autorun=\"" << this->Internal->AutoRun << "\"";
   
   // Loop over the parameter groups, writing each parameter.  Note
   // that the parameter names are unique.
@@ -130,6 +147,7 @@ void vtkMRMLCommandLineModuleNode::WriteXML(ostream& of, int nIndent)
 //----------------------------------------------------------------------------
 void vtkMRMLCommandLineModuleNode::ReadXMLAttributes(const char** atts)
 {
+  int wasModifying = this->StartModify();
   vtkMRMLNode::ReadXMLAttributes(atts);
 
   // To reconstitute a CommandLineModule node:
@@ -161,6 +179,14 @@ void vtkMRMLCommandLineModuleNode::ReadXMLAttributes(const char** atts)
     else if (!strcmp(attName, "version"))
       {
       moduleVersion = this->URLDecodeString(attValue);
+      }
+    else if (!strcmp(attName, "status"))
+      {
+      int autoRun = NoAutoRun;
+      std::stringstream ss;
+      ss << attValue;
+      ss >> autoRun;
+      this->SetAutoRun(autoRun);
       }
     }
 
@@ -205,6 +231,7 @@ void vtkMRMLCommandLineModuleNode::ReadXMLAttributes(const char** atts)
       this->Internal->ModuleDescriptionObject.SetParameterDefaultValue(sattName.c_str(),sattValue.c_str());
       }
     }
+  this->EndModify(wasModifying);
 }
 
 //----------------------------------------------------------------------------
@@ -222,12 +249,14 @@ void vtkMRMLCommandLineModuleNode::Copy(vtkMRMLNode *anode)
 //----------------------------------------------------------------------------
 void vtkMRMLCommandLineModuleNode::PrintSelf(ostream& os, vtkIndent indent)
 {
-  vtkMRMLNode::PrintSelf(os,indent);
+  this->Superclass::PrintSelf(os,indent);
 
   os << indent << "Module description:   "
-     << std::endl
+     << "\n"
      << "   " << this->GetModuleDescription();
-  os << indent << "Status: " << this->GetStatus();
+  os << indent << "Status: " << this->GetStatus() << "\n";
+  os << indent << "AutoRun:" << this->GetAutoRun()
+     << (this->IsAutoRunOn() ? "(On)" : "(Off)");
 }
 
 //----------------------------------------------------------------------------
@@ -256,6 +285,100 @@ void vtkMRMLCommandLineModuleNode::SetModuleDescription(const ModuleDescription&
 }
 
 //----------------------------------------------------------------------------
+void vtkMRMLCommandLineModuleNode
+::ProcessMRMLEvents(vtkObject *caller, unsigned long event,
+                    void *vtkNotUsed(callData) )
+{
+  vtkMRMLNode* node = vtkMRMLNode::SafeDownCast(caller);
+  if (!node || event != vtkCommand::ModifiedEvent)
+    {
+    return;
+    }
+  // Make sure the caller is an input node.
+  bool isInput = this->IsInputDefaultValue(node->GetID());
+  // Let the CLI logic know that an input parameter has been modified.
+  if (isInput)
+    {
+    this->Internal->InputMTime.Modified();
+    this->InvokeEvent(vtkMRMLCommandLineModuleNode::InputParameterModifiedEvent);
+    }
+}
+
+//----------------------------------------------------------------------------
+bool vtkMRMLCommandLineModuleNode
+::IsInputDefaultValue(const std::string& value)const
+{
+  bool isInput = false;
+  std::vector<ModuleParameter> parameters =
+    this->Internal->ModuleDescriptionObject.FindParametersWithDefaultValue(
+      value);
+  // It is an input if it is not an output.
+  std::vector<ModuleParameter>::const_iterator it;
+  for (it = parameters.begin(); it != parameters.end(); ++it)
+    {
+    static std::string output = std::string("output");
+    if (it->GetChannel() == output)
+      {
+      // A parameter that is output can't trigger InputParameterModifiedEvent
+      // even if it is an input too. It would generate infinite autorun loops
+      // otherwise.
+      isInput = false;
+      break;
+      }
+    if (it->GetChannel() != output)
+      {
+      isInput = true;
+      }
+    }
+  return isInput;
+}
+
+//----------------------------------------------------------------------------
+bool vtkMRMLCommandLineModuleNode
+::SetParameterAsNode(const char* name, vtkMRMLNode* node)
+{
+  std::string value = node ? node->GetID() : "";
+  std::string oldValue = this->GetParameterAsString(name);
+  // Set the default value of the named parameter with the value
+  // specified
+  if (value != oldValue)
+    {
+    if (!this->Internal->ModuleDescriptionObject.SetParameterDefaultValue(name, value))
+      {
+      assert(this->Internal->ModuleDescriptionObject.HasParameter(name));
+      return false;
+      }
+    // Observe all the nodes, even if we are not in autorun mode because we
+    // have no way a posteriory to know which parameter is a node.
+    if (node)
+      {
+      // Observe if not already observed
+      if (this->MRMLObserverManager->GetObservationsCount(node) == 0 &&
+          this->IsInputDefaultValue(value))
+        {
+        vtkObserveMRMLObjectMacro(node);
+        }
+      // if the old node is no longer an input parameter
+      //if (!this->IsInputDefaultValue(oldValue))
+      //  {
+      //  // no need to observe it.
+      //  vtkMRMLNode* oldNode = (this->GetScene() ?
+      //                          this->GetScene()->GetNodeByID(oldValue.c_str()) : 0);
+      //  if (oldNode)
+      //    {
+      //    vtkUnObserveMRMLObjectMacro(oldNode);
+      //    }
+      //  }
+      }
+    this->Internal->ParameterMTime.Modified();
+    this->InvokeEvent(vtkMRMLCommandLineModuleNode::ParameterChangedEvent);
+    this->Modified();
+    return true;
+    }
+  return false;
+}
+
+//----------------------------------------------------------------------------
 bool vtkMRMLCommandLineModuleNode
 ::SetParameterAsString(const char* name, const std::string& value)
 {
@@ -267,6 +390,8 @@ bool vtkMRMLCommandLineModuleNode
       {
       return false;
       }
+    this->Internal->ParameterMTime.Modified();
+    this->InvokeEvent(vtkMRMLCommandLineModuleNode::ParameterChangedEvent);
     this->Modified();
     return true;
     }
@@ -278,21 +403,8 @@ bool vtkMRMLCommandLineModuleNode
 ::SetParameterAsDouble(const char* name, double value)
 {
   std::ostringstream strvalue;
-
   strvalue << value;
-  
-  // Set the default value of the named parameter with the value
-  // specified
-  if (strvalue.str() != this->GetParameterAsString(name))
-    {
-    if (!this->Internal->ModuleDescriptionObject.SetParameterDefaultValue(name, strvalue.str()))
-      {
-      return false;
-      }
-    this->Modified();
-    return true;
-    }
-  return false;
+  return this->SetParameterAsString(name, strvalue.str());
 }
 
 //----------------------------------------------------------------------------
@@ -300,63 +412,25 @@ bool vtkMRMLCommandLineModuleNode
 ::SetParameterAsFloat(const char *name, float value)
 {
   std::ostringstream strvalue;
-
   strvalue << value;
-  
-  // Set the default value of the named parameter with the value
-  // specified
-  if (strvalue.str() != this->GetParameterAsString(name))
-    {
-    if (!this->Internal->ModuleDescriptionObject.SetParameterDefaultValue(name, strvalue.str()))
-      {
-      return false;
-      }
-    this->Modified();
-    return true;
-    }
-  return false;
+  return this->SetParameterAsString(name, strvalue.str());
 }
-
 
 //----------------------------------------------------------------------------
 bool vtkMRMLCommandLineModuleNode
 ::SetParameterAsInt(const char* name, int value)
 {
   std::ostringstream strvalue;
-
   strvalue << value;
-  
-  // Set the default value of the named parameter with the value
-  // specified
-  if (strvalue.str() != this->GetParameterAsString(name))
-    {
-    if (!this->Internal->ModuleDescriptionObject.SetParameterDefaultValue(name, strvalue.str()))
-      {
-      return false;
-      }
-    this->Modified();
-    return true;
-    }
-  return false;
+  return this->SetParameterAsString(name, strvalue.str());
 }
 
 //----------------------------------------------------------------------------
 bool vtkMRMLCommandLineModuleNode
 ::SetParameterAsBool(const char* name, bool value)
 {
-  // Set the default value of the named parameter with the value
-  // specified
-  if (this->GetParameterAsString(name) != (value ? "true" : "false"))
-    {
-    if (!this->Internal->ModuleDescriptionObject.SetParameterDefaultValue(
-          name, value ? "true" : "false"))
-      {
-      return false;
-      }
-    this->Modified();
-    return true;
-    }
-  return false;
+  std::string valueAsString = (value ? "true" : "false");
+  return this->SetParameterAsString(name, valueAsString);
 }
 
 //----------------------------------------------------------------------------
@@ -372,9 +446,16 @@ void vtkMRMLCommandLineModuleNode
   if (this->Internal->Status != status)
     {
     this->Internal->Status = status;
-    if (this->Internal->Status == vtkMRMLCommandLineModuleNode::Cancelled)
+    switch (this->Internal->Status)
       {
-      this->AbortProcess();
+      case vtkMRMLCommandLineModuleNode::Running:
+        this->Internal->LastRunTime.Modified();
+        break;
+      case vtkMRMLCommandLineModuleNode::Cancelling:
+        this->AbortProcess();
+        break;
+      default:
+        break;
       }
     if (modify)
       {
@@ -390,6 +471,71 @@ vtkMRMLCommandLineModuleNode::StatusType vtkMRMLCommandLineModuleNode::GetStatus
 }
 
 //----------------------------------------------------------------------------
+bool vtkMRMLCommandLineModuleNode::IsBusy() const
+{
+  return this->Internal->Status & vtkMRMLCommandLineModuleNode::BusyMask;
+}
+
+//----------------------------------------------------------------------------
+void vtkMRMLCommandLineModuleNode::SetAutoRun(int autoRun)
+{
+  if (this->Internal->AutoRun == autoRun)
+    {
+    return;
+    }
+  this->Internal->AutoRun = autoRun;
+  this->Modified();
+}
+
+//----------------------------------------------------------------------------
+int vtkMRMLCommandLineModuleNode::GetAutoRun() const
+{
+  return this->Internal->AutoRun;
+}
+
+//----------------------------------------------------------------------------
+bool vtkMRMLCommandLineModuleNode::IsAutoRunOn() const
+{
+  return this->Internal->AutoRun & vtkMRMLCommandLineModuleNode::AutoRunOn;
+}
+
+//----------------------------------------------------------------------------
+void vtkMRMLCommandLineModuleNode::SetAutoRunDelay(unsigned int delayInMs)
+{
+  if (this->Internal->AutoRunDelay == delayInMs)
+    {
+    return;
+    }
+  this->Internal->AutoRunDelay = delayInMs;
+  this->Modified();
+}
+
+//----------------------------------------------------------------------------
+unsigned int vtkMRMLCommandLineModuleNode::GetAutoRunDelay() const
+{
+  return this->Internal->AutoRunDelay;
+}
+
+//----------------------------------------------------------------------------
+unsigned long vtkMRMLCommandLineModuleNode::GetLastRunTime() const
+{
+  return this->Internal->LastRunTime.GetMTime();
+}
+
+//----------------------------------------------------------------------------
+unsigned long vtkMRMLCommandLineModuleNode::GetParameterMTime() const
+{
+  return this->Internal->ParameterMTime.GetMTime();
+}
+
+//----------------------------------------------------------------------------
+unsigned long vtkMRMLCommandLineModuleNode::GetInputMTime() const
+{
+  return this->Internal->InputMTime.GetMTime();
+}
+
+
+//----------------------------------------------------------------------------
 const char* vtkMRMLCommandLineModuleNode::GetStatusString() const
 {
   switch (this->Internal->Status)
@@ -397,9 +543,12 @@ const char* vtkMRMLCommandLineModuleNode::GetStatusString() const
     case Idle: return "Idle";
     case Scheduled: return "Scheduled";
     case Running: return "Running";
+    case Cancelled: return "Cancelled";
+    case Cancelling: return "Cancelling";
     case Completed: return "Completed";
     case CompletedWithErrors: return "CompletedWithErrors";
-    case Cancelled: return "Cancelled";
+    default:
+      break;
     }
   return "Unknown";
 }
@@ -470,25 +619,25 @@ void vtkMRMLCommandLineModuleNode::SetModuleDescription ( const char *name )
 //----------------------------------------------------------------------------
 std::string vtkMRMLCommandLineModuleNode::GetModuleVersion () const
 {
-  return this->GetModuleDescription().GetVersion().c_str();
+  return this->GetModuleDescription().GetVersion();
 }
 
 //----------------------------------------------------------------------------
 std::string vtkMRMLCommandLineModuleNode::GetModuleTitle () const
 {
-  return this->GetModuleDescription().GetTitle().c_str();
+  return this->GetModuleDescription().GetTitle();
 }
 
 //----------------------------------------------------------------------------
 std::string vtkMRMLCommandLineModuleNode::GetModuleTarget () const
 {
-  return this->GetModuleDescription().GetTarget().c_str();
+  return this->GetModuleDescription().GetTarget();
 }
 
 //----------------------------------------------------------------------------
 std::string vtkMRMLCommandLineModuleNode::GetModuleType () const
 {
-  return this->GetModuleDescription().GetType().c_str();
+  return this->GetModuleDescription().GetType();
 }
 
 //----------------------------------------------------------------------------

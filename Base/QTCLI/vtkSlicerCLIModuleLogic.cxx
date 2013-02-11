@@ -28,6 +28,8 @@
 #include <vtkMRMLTransformNode.h>
 
 // VTK includes
+#include <vtkIntArray.h>
+#include <vtkNew.h>
 #include <vtkStringArray.h>
 
 // ITKSYS includes
@@ -526,8 +528,11 @@ void vtkSlicerCLIModuleLogic::ApplyTask(void *clientdata)
   node0.TakeReference(reinterpret_cast<vtkMRMLCommandLineModuleNode*>(clientdata));
 
   // Check to see if this node/task has been cancelled
-  if (node0->GetStatus() == vtkMRMLCommandLineModuleNode::Cancelled)
+  if (node0->GetStatus() == vtkMRMLCommandLineModuleNode::Cancelling ||
+      node0->GetStatus() == vtkMRMLCommandLineModuleNode::Cancelled)
     {
+    node0->SetStatus(vtkMRMLCommandLineModuleNode::Cancelled, false);
+    this->GetApplicationLogic()->RequestModified( node0 );
     return;
     }
 
@@ -1568,7 +1573,12 @@ void vtkSlicerCLIModuleLogic::ApplyTask(void *clientdata)
       }
     
     // check the exit state / error state of the process
-    if (node0->GetStatus() != vtkMRMLCommandLineModuleNode::Cancelled)
+    if (node0->GetStatus() == vtkMRMLCommandLineModuleNode::Cancelling)
+      {
+      node0->SetStatus(vtkMRMLCommandLineModuleNode::Cancelled, false);
+      this->GetApplicationLogic()->RequestModified(node0);
+      }
+    else
       {
       int result = itksysProcess_GetState(process);
       if (result == itksysProcess_State_Exited)
@@ -1704,7 +1714,7 @@ void vtkSlicerCLIModuleLogic::ApplyTask(void *clientdata)
     catch (itk::ExceptionObject& exc)
       {
       std::stringstream information;
-      if (node0->GetStatus() == vtkMRMLCommandLineModuleNode::Cancelled)
+      if (node0->GetStatus() == vtkMRMLCommandLineModuleNode::Cancelling)
         {
         information << node0->GetModuleDescription().GetTitle()
                     << " cancelled.";
@@ -1734,6 +1744,11 @@ void vtkSlicerCLIModuleLogic::ApplyTask(void *clientdata)
 
       std::cout.rdbuf( origcoutrdbuf );
       std::cerr.rdbuf( origcerrrdbuf );
+      }
+    if (node0->GetStatus() == vtkMRMLCommandLineModuleNode::Cancelling)
+      {
+      node0->SetStatus(vtkMRMLCommandLineModuleNode::Cancelled, false);
+      this->GetApplicationLogic()->RequestModified( node0 );
       }
     // Check the return status of the module
     if (returnValue)
@@ -1825,8 +1840,13 @@ void vtkSlicerCLIModuleLogic::ApplyTask(void *clientdata)
 
     this->GetApplicationLogic()->RequestModified( node0 );
     }
-  if (node0->GetStatus() != vtkMRMLCommandLineModuleNode::Cancelled 
-      && node0->GetStatus() != vtkMRMLCommandLineModuleNode::CompletedWithErrors)
+  if (node0->GetStatus() == vtkMRMLCommandLineModuleNode::Cancelling)
+    {
+    node0->SetStatus(vtkMRMLCommandLineModuleNode::Cancelled, false);
+    this->GetApplicationLogic()->RequestModified( node0 );
+    }
+  else if (node0->GetStatus() != vtkMRMLCommandLineModuleNode::Cancelled
+           && node0->GetStatus() != vtkMRMLCommandLineModuleNode::CompletedWithErrors)
     {
     node0->SetStatus(vtkMRMLCommandLineModuleNode::Completed, false);
     this->GetApplicationLogic()->RequestModified( node0 );
@@ -1839,8 +1859,7 @@ void vtkSlicerCLIModuleLogic::ApplyTask(void *clientdata)
   // import the results if the plugin was allowed to complete
   //
   //
-  if (node0->GetStatus() != vtkMRMLCommandLineModuleNode::Cancelled &&
-      node0->GetStatus() != vtkMRMLCommandLineModuleNode::CompletedWithErrors)
+  if (node0->GetStatus() == vtkMRMLCommandLineModuleNode::Completed)
     {
     // reload nodes
     for (id2fn0 = nodesToReload.begin(); id2fn0 != nodesToReload.end(); ++id2fn0)
@@ -2104,3 +2123,128 @@ bool vtkSlicerCLIModuleLogic
   const char* updateDisplay = node->GetAttribute("UpdateDisplay");
   return !updateDisplay || (strcmp(updateDisplay, "false") != 0);
 }
+
+//----------------------------------------------------------------------------
+void vtkSlicerCLIModuleLogic::SetMRMLSceneInternal(vtkMRMLScene * newScene)
+{
+  vtkNew<vtkIntArray> events;
+  events->InsertNextValue(vtkMRMLScene::NodeAddedEvent);
+  this->SetAndObserveMRMLSceneEventsInternal(newScene, events.GetPointer());
+}
+
+//----------------------------------------------------------------------------
+void vtkSlicerCLIModuleLogic::OnMRMLSceneNodeAdded(vtkMRMLNode* node)
+{
+  if (node->IsA("vtkMRMLCommandLineModuleNode"))
+    {
+    vtkNew<vtkIntArray> events;
+    events->InsertNextValue(vtkCommand::ModifiedEvent);
+    events->InsertNextValue(
+      vtkMRMLCommandLineModuleNode::ParameterChangedEvent);
+    events->InsertNextValue(
+      vtkMRMLCommandLineModuleNode::InputParameterModifiedEvent);
+    events->InsertNextValue(
+      vtkMRMLCommandLineModuleNode::AutoRunEvent);
+    vtkObserveMRMLNodeEventsMacro(node, events.GetPointer());
+    }
+  this->Superclass::OnMRMLSceneNodeAdded(node);
+}
+
+//---------------------------------------------------------------------------
+void vtkSlicerCLIModuleLogic
+::ProcessMRMLNodesEvents(vtkObject *caller, unsigned long event,
+                         void *callData)
+{
+  vtkMRMLNode* node = vtkMRMLNode::SafeDownCast(caller);
+  assert(node);
+  // Observe only the CLI of the logic.
+  vtkMRMLCommandLineModuleNode* cliNode =
+    vtkMRMLCommandLineModuleNode::SafeDownCast(node);
+  if (cliNode &&
+      cliNode->GetModuleTitle() ==
+        this->Internal->DefaultModuleDescription.GetTitle())
+    {
+    switch(event)
+      {
+      case vtkCommand::ModifiedEvent:
+        break;
+      case vtkMRMLCommandLineModuleNode::ParameterChangedEvent:
+        if (cliNode->GetAutoRun() &
+            vtkMRMLCommandLineModuleNode::AutoRunWhenParameterChanged)
+          {
+          this->AutoRun(cliNode);
+          }
+        break;
+      case vtkMRMLCommandLineModuleNode::InputParameterModifiedEvent:
+        if (cliNode->GetAutoRun() &
+            vtkMRMLCommandLineModuleNode::AutoRunWhenInputModified)
+          {
+          this->AutoRun(cliNode);
+          }
+        break;
+      case vtkMRMLCommandLineModuleNode::AutoRunEvent:
+        {
+        unsigned long requestTime = reinterpret_cast<unsigned long>(callData);
+        if (cliNode->IsAutoRunOn() &&
+            ((cliNode->GetAutoRun() & vtkMRMLCommandLineModuleNode::AutoRunWhenInputModified &&
+              cliNode->GetInputMTime() <= requestTime) ||
+             (cliNode->GetAutoRun() & vtkMRMLCommandLineModuleNode::AutoRunWhenParameterChanged &&
+              cliNode->GetParameterMTime() <= requestTime)))
+          {
+          if (cliNode->IsBusy())
+            {
+            this->AutoRun(cliNode);
+            }
+          else
+            {
+            this->Apply(cliNode);
+            }
+          }
+        else
+          {
+          vtkDebugMacro(<<"Skip AutoRun, it is not the last event");
+          }
+        break;
+        }
+      default:
+        break;
+      }
+    }
+  this->Superclass::ProcessMRMLNodesEvents(caller, event, callData);
+}
+
+//---------------------------------------------------------------------------
+void vtkSlicerCLIModuleLogic
+::AutoRun(vtkMRMLCommandLineModuleNode* node)
+{
+  if (!node || !node->IsAutoRunOn())
+    {
+    return;
+    }
+  unsigned int extraDelay = 0;
+
+  if (node->IsBusy())
+    {
+    if (!(node->GetAutoRun()
+          & vtkMRMLCommandLineModuleNode::AutoRunCancelsRunningProcess))
+      {
+      return;
+      }
+    if (node->GetStatus() != vtkMRMLCommandLineModuleNode::Cancelling)
+      {
+      // request the module execution to be cancelled.
+      node->SetStatus(vtkMRMLCommandLineModuleNode::Cancelling);
+      // Wait until the module is stopped
+      extraDelay = 100;
+      }
+    }
+  unsigned long requestTime =
+    (node->GetAutoRun() & vtkMRMLCommandLineModuleNode::AutoRunWhenInputModified) ?
+    node->GetInputMTime() : node->GetParameterMTime();
+  // Wait a bit (for potential other modifications) before re-running the module.
+  this->GetApplicationLogic()->InvokeEventWithDelay(
+    node->GetAutoRunDelay() + extraDelay,
+    node, vtkMRMLCommandLineModuleNode::AutoRunEvent,
+    reinterpret_cast<void*>(requestTime));
+}
+

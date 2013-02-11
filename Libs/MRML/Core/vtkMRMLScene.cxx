@@ -1403,7 +1403,7 @@ void vtkMRMLScene::RemoveNode(vtkMRMLNode *n)
                   << "["  << n << "]" << " can't be found by ID");
     }
 #endif
-
+  std::cout << "vtkMRMLScene::Remove node " << n->GetID() << std::endl;
   n->Register(this);
   this->InvokeEvent(vtkMRMLScene::NodeAboutToBeRemovedEvent, n);
 

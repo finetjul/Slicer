@@ -35,6 +35,8 @@ typedef enum { CommandLineModule, SharedObjectModule, PythonModule } CommandLine
 ///
 /// vtkSlicerCLIModuleLogic logic allows to run a either synchronously or asynchronously CLI
 /// using parameters of a \a vtkMRMLCommandLineModuleNode.
+/// While a CLI module logic can run any CLI node, the logic can uniquely be
+/// assigned a specific CLI by setting a DefaultModuleDescription.
 class Q_SLICER_BASE_QTCLI_EXPORT vtkSlicerCLIModuleLogic :
   public vtkSlicerModuleLogic
 {
@@ -43,16 +45,22 @@ public:
   vtkTypeMacro(vtkSlicerCLIModuleLogic,vtkSlicerModuleLogic);
   void PrintSelf(ostream& os, vtkIndent indent);
 
+  /// The default module description is used when creating new nodes.
+  /// \sa CreateNode()
   void SetDefaultModuleDescription(const ModuleDescription& moduleDescription);
   const ModuleDescription& GetDefaultModuleDescription()const;
 
   /// Instantiate a default command line module node.
+  /// If a default module description has been given, the node is initialized
+  /// with the description.
   /// Warning: The caller is responsible for deleting it.
+  /// \sa CreateNodeInScene(), SetDefaultModuleDescription()
   vtkMRMLCommandLineModuleNode* CreateNode();
 
   /// Instantiate a default command line module node and add it into the
   /// scene.
   /// The caller is responsible for remove the node from the scene.
+  /// \sa CreateNode(), SetDefaultModuleDescription()
   vtkMRMLCommandLineModuleNode* CreateNodeInScene();
 
   // TODO: do we need to observe MRML here?
@@ -96,6 +104,14 @@ public:
 //     { this->LazyEvaluateModuleTarget(node->GetModuleDescription()); }
 
 protected:
+  /// Reimplemented to observe NodeAddedEvent, NodeRemovedEvent and
+  /// OnMRMLNodeModified.
+  virtual void SetMRMLSceneInternal(vtkMRMLScene * newScene);
+  virtual void OnMRMLSceneNodeAdded(vtkMRMLNode* node);
+  virtual void ProcessMRMLNodesEvents(vtkObject *caller, unsigned long event,
+                                      void *callData);
+
+
   std::string ConstructTemporaryFileName(const std::string& tag,
                                          const std::string& type,
                                          const std::string& name,
@@ -115,6 +131,9 @@ protected:
   /// selection node with the outputs of the CLI
   bool IsCommandLineModuleNodeUpdatingDisplay(
     vtkMRMLCommandLineModuleNode* commandLineModuleNode)const;
+
+  /// Call apply because the node requests it.
+  void AutoRun(vtkMRMLCommandLineModuleNode* cliNode);
 
 private:
   vtkSlicerCLIModuleLogic();

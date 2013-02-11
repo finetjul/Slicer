@@ -31,6 +31,7 @@
 
 // MRML includes
 #include <vtkMRMLCommandLineModuleNode.h>
+#include <vtkMRMLScene.h>
 
 // ITK includes
 
@@ -969,13 +970,16 @@ void qSlicerCLIModuleUIHelper::updateMRMLCommandLineModuleNode(
   // Just in case setCommandLineModuleParameter() has not generated any
   // blocked modify event.
   // TODO: ensure it is really useful to force a modify event
-  commandLineModuleNode->Modified();
+  //commandLineModuleNode->Modified();
   commandLineModuleNode->EndModify(disabledModify);
 }
 
 //-----------------------------------------------------------------------------
-void qSlicerCLIModuleUIHelper::setCommandLineModuleParameter(vtkMRMLCommandLineModuleNode* commandLineModuleNode, const QString& name, const QVariant& value)
+void qSlicerCLIModuleUIHelper
+::setCommandLineModuleParameter(vtkMRMLCommandLineModuleNode* commandLineModuleNode,
+                                const QString& name, const QVariant& value)
 {
+  Q_D(qSlicerCLIModuleUIHelper);
   QVariant::Type type = value.type();
   if (type == QVariant::Bool)
     {
@@ -994,8 +998,19 @@ void qSlicerCLIModuleUIHelper::setCommandLineModuleParameter(vtkMRMLCommandLineM
     }
   else if (type == QVariant::String)
     {
-    commandLineModuleNode->SetParameterAsString(name.toLatin1(),
-                                                value.toString().toStdString());
+    QString valueAsString = value.toString();
+    vtkMRMLNode* node = valueAsString.startsWith("vtkMRML") ?
+      d->CLIModuleWidget->mrmlScene()->GetNodeByID(
+        valueAsString.toLatin1()) : 0;
+    if (node)
+      {
+      commandLineModuleNode->SetParameterAsNode(name.toLatin1(),node);
+      }
+    else
+      {
+      commandLineModuleNode->SetParameterAsString(name.toLatin1(),
+                                                  value.toString().toStdString());
+      }
     }
   else
     {
@@ -1036,13 +1051,15 @@ void qSlicerCLIModuleUIHelper::setValue(const QString& name, const QVariant& val
 //-----------------------------------------------------------------------------
 void qSlicerCLIModuleUIHelper::onValueChanged()
 {
+  QString name;
+  QVariant value;
+
   qSlicerWidgetValueWrapper* wrapper = qobject_cast<qSlicerWidgetValueWrapper*>(this->sender());
   if (wrapper)
     {
-    emit this->valueChanged(wrapper->name(), wrapper->value());
+    name = wrapper->name();
+    value = wrapper->value();
     }
-  else
-    {
-    emit this->valueChanged(QString(), QVariant());
-    }
+
+  emit this->valueChanged(name, value);
 }
