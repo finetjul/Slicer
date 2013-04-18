@@ -1357,6 +1357,56 @@ void qSlicerCoreApplication::onSlicerApplicationLogicModified()
 
 //-----------------------------------------------------------------------------
 void qSlicerCoreApplication
+::requestInvokeEvent(vtkObject* caller, void* callData)
+{
+  Q_UNUSED(caller);
+  vtkMRMLApplicationLogic::InvokeRequest* request =
+    reinterpret_cast<vtkMRMLApplicationLogic::InvokeRequest *>(callData);
+  QTimer* timer = new QTimer(this);
+  timer->setSingleShot(true);
+  QVariant invokeCaller =
+    qVariantFromValue(reinterpret_cast<void*>(request->Caller));
+  timer->setProperty("caller", invokeCaller);
+
+  QVariant invokeEventID =
+    qVariantFromValue(request->EventID);
+  timer->setProperty("eventID", invokeEventID);
+
+  QVariant invokeCallData =
+    qVariantFromValue(reinterpret_cast<void*>(request->CallData));
+  timer->setProperty("callData", invokeCallData);
+
+  timer->connect(timer, SIGNAL(timeout()),this, SLOT(invokeEvent()));
+  timer->start(request->Delay);
+}
+
+
+//-----------------------------------------------------------------------------
+void qSlicerCoreApplication
+::invokeEvent()
+{
+  QTimer* timer = qobject_cast<QTimer*>(this->sender());
+  Q_ASSERT(timer);
+  if (!timer)
+    {
+    return;
+    }
+  QVariant callerVariant = timer->property("caller");
+  QVariant eventIDVariant = timer->property("eventID");
+  QVariant callDataVariant = timer->property("callData");
+  vtkObject* caller =
+    reinterpret_cast<vtkObject*>(callerVariant.value<void*>());
+  unsigned long eventID = eventIDVariant.toULongLong();
+  void* callData = callDataVariant.value<void*>();
+  if (caller)
+    {
+    caller->InvokeEvent(eventID, callData);
+    }
+  timer->deleteLater();
+}
+
+//-----------------------------------------------------------------------------
+void qSlicerCoreApplication
 ::onSlicerApplicationLogicRequest(vtkObject* appLogic, void* delay, unsigned long event)
 {
   Q_D(qSlicerCoreApplication);
