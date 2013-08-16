@@ -3,11 +3,13 @@
 # -------------------------------------------------------------------------
 set(QT_INSTALL_LIB_DIR ${Slicer_INSTALL_LIB_DIR})
 
-set(QTLIBLIST QTCORE QTGUI QTNETWORK QTXML QTTEST QTSCRIPT QTSQL QTSVG QTOPENGL QTWEBKIT PHONON QTXMLPATTERNS)
-if(UNIX OR APPLE)
-  list(APPEND QTLIBLIST QTDBUS)
+set(qtlibs ${Slicer_REQUIRED_QT_MODULES})
+list(FIND Slicer_REQUIRED_QT_MODULES QTWEBKIT  use_webkit)
+if(${use_webkit} GREATER -1)
+  list(APPEND qtlibs PHONON)
 endif()
-foreach(qtlib ${QTLIBLIST})
+
+foreach(qtlib ${qtlibs})
   if(QT_${qtlib}_LIBRARY_RELEASE)
     if(APPLE)
       install(DIRECTORY "${QT_${qtlib}_LIBRARY_RELEASE}"
@@ -22,9 +24,10 @@ foreach(qtlib ${QTLIBLIST})
         PATTERN "${QT_LIB_NAME_tmp}*.debug" EXCLUDE)
     elseif(WIN32)
       get_filename_component(QT_DLL_PATH_tmp ${QT_QMAKE_EXECUTABLE} PATH)
-      install(FILES ${QT_DLL_PATH_tmp}/${qtlib}4.dll
-        DESTINATION bin COMPONENT Runtime)
+      if(EXISTS "${QT_DLL_PATH_tmp}/${qtlib}4.dll")
+        install(FILES ${QT_DLL_PATH_tmp}/${qtlib}4.dll
+          DESTINATION bin COMPONENT Runtime)
+      endif()
     endif()
   endif()
 endforeach()
-
