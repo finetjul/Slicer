@@ -21,7 +21,9 @@
 #include "qSlicerIconEnginePlugin.h"
 
 //-----------------------------------------------------------------------------
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
 Q_EXPORT_PLUGIN2(qSlicerIconEnginePlugin, qSlicerIconEnginePlugin)
+#endif
 
 //------------------------------------------------------------------------------
 qSlicerIconEnginePlugin::qSlicerIconEnginePlugin(QObject* parentObject)

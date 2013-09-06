@@ -26,7 +26,9 @@
 #include "qSlicerMultiVolumeRenderingModuleWidget.h"
 
 //-----------------------------------------------------------------------------
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
 Q_EXPORT_PLUGIN2(qSlicerMultiVolumeRenderingModule, qSlicerMultiVolumeRenderingModule);
+#endif
 
 //-----------------------------------------------------------------------------
 /// \ingroup Slicer_QtModules_MultiVolumeRendering

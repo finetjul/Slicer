@@ -36,6 +36,9 @@ class Q_SLICER_MODULE_ANNOTATIONS_WIDGETS_PLUGINS_EXPORT qSlicerAnnotationModule
   , public QDesignerCustomWidgetCollectionInterface
 {
   Q_OBJECT
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+  Q_PLUGIN_METADATA(IID "org.slicer.UnitsWidgets")
+#endif
   Q_INTERFACES(QDesignerCustomWidgetCollectionInterface);
 
 public:

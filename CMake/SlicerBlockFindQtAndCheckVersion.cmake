@@ -48,6 +48,18 @@ macro(__SlicerBlockFindQtAndCheckVersion_find_qt)
   endforeach()
 endmacro()
 
+if (Slicer_QT_VERSION VERSION_GREATER "4")
+  find_package(Qt5Widgets REQUIRED)
+  find_package(Qt5Quick REQUIRED)
+  find_package(Qt5Sql REQUIRED)
+  find_package(Qt5Xml REQUIRED)
+  find_package(Qt5OpenGL REQUIRED)
+  find_package(Qt5Network REQUIRED)
+  find_package(Qt5WebKit REQUIRED)
+  find_package(Qt5WebKitWidgets REQUIRED)
+  return()
+endif()
+
 # Sanity checks - Check if variable are defined
 set(expected_defined_vars
   Slicer_REQUIRED_QT_VERSION

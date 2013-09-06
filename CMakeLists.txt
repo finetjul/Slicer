@@ -140,10 +140,13 @@ endif()
 #-----------------------------------------------------------------------------
 # Qt requirements
 #-----------------------------------------------------------------------------
-if(NOT DEFINED Slicer_REQUIRED_QT_VERSION)
-  set(Slicer_REQUIRED_QT_VERSION "4.7.4" CACHE STRING "Exact required Qt version" FORCE)
+option(Slicer_QT_VERSION "Build with Qt4" 4)
+if (Slicer_QT_VERSION VERSION_EQUAL "4")
+  if(NOT DEFINED Slicer_REQUIRED_QT_VERSION)
+    set(Slicer_REQUIRED_QT_VERSION "4.7.4" CACHE STRING "Exact required Qt version" FORCE)
+  endif()
+  set(Slicer_EXPERIMENTAL_QT_VERSION "4.8.4")
 endif()
-set(Slicer_EXPERIMENTAL_QT_VERSION "4.8.4")
 
 #-----------------------------------------------------------------------------
 # Superbuild Option - Enabled by default
@@ -474,14 +477,16 @@ endif()
 #-----------------------------------------------------------------------------
 # Qt - Slicer_REQUIRED_QT_MODULES
 #-----------------------------------------------------------------------------
-# Module name should be specified as they appear in FindQt4.cmake
-# For example, the module name associated with the variable QT_USE_QTXML is XML.
-set(Slicer_REQUIRED_QT_MODULES CORE GUI NETWORK UITOOLS XML WEBKIT SVG SQL)
-if(Slicer_BUILD_EXTENSIONMANAGER_SUPPORT)
-  list(APPEND Slicer_REQUIRED_QT_MODULES SCRIPT)
-endif()
-if(BUILD_TESTING)
-  list(APPEND Slicer_REQUIRED_QT_MODULES TEST)
+if (Slicer_QT_VERSION VERSION_EQUAL "5")
+  # Module name should be specified as they appear in FindQt4.cmake
+  # For example, the module name associated with the variable QT_USE_QTXML is XML.
+  set(Slicer_REQUIRED_QT_MODULES CORE GUI NETWORK UITOOLS XML WEBKIT SVG SQL)
+  if(Slicer_BUILD_EXTENSIONMANAGER_SUPPORT)
+    list(APPEND Slicer_REQUIRED_QT_MODULES SCRIPT)
+  endif()
+  if(BUILD_TESTING)
+    list(APPEND Slicer_REQUIRED_QT_MODULES TEST)
+  endif()
 endif()
 
 #-----------------------------------------------------------------------------

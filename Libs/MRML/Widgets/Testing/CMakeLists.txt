@@ -109,15 +109,28 @@ set(Tests_UtilityFiles
   qMRMLNodeObject.h
   )
 
-QT4_WRAP_CPP(Tests_MOC_CXX ${Tests_MOC_SRCS})
-QT4_GENERATE_MOCS(
-  qMRMLCheckableNodeComboBoxTest.cxx
-  qMRMLColorModelTest.cxx
-  qMRMLDisplayNodeViewComboBoxTest.cxx
-  qMRMLLabelComboBoxTest.cxx
-  qMRMLSceneModelTest.cxx
-  qMRMLSliceControllerWidgetTest.cxx
-  )
+if (Slicer_QT_VERSION VERSION_EQUAL "4")
+  QT4_WRAP_CPP(Tests_MOC_CXX ${Tests_MOC_SRCS})
+  QT4_GENERATE_MOCS(
+    qMRMLCheckableNodeComboBoxTest.cxx
+    qMRMLColorModelTest.cxx
+    qMRMLDisplayNodeViewComboBoxTest.cxx
+    qMRMLLabelComboBoxTest.cxx
+    qMRMLSceneModelTest.cxx
+    qMRMLSliceControllerWidgetTest.cxx
+    )
+else()
+  QT5_WRAP_CPP(Tests_MOC_CXX ${Tests_MOC_SRCS})
+  QT5_GENERATE_MOCS(
+    qMRMLCheckableNodeComboBoxTest.cxx
+    qMRMLColorModelTest.cxx
+    qMRMLDisplayNodeViewComboBoxTest.cxx
+    qMRMLLabelComboBoxTest.cxx
+    qMRMLSceneModelTest.cxx
+    qMRMLSliceControllerWidgetTest.cxx
+    )
+endif()
+
 
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 

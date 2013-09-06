@@ -79,8 +79,13 @@ void qMRMLNodeAttributeTableViewPrivate::init()
   this->setMessage(QString());
 
   // Set up initial look of node attributes table
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+  this->NodeAttributesTable->horizontalHeader()->setSectionResizeMode(
+    QHeaderView::ResizeToContents);
+#else
   this->NodeAttributesTable->horizontalHeader()->setResizeMode(
     QHeaderView::ResizeToContents);
+#endif
 }
 
 // --------------------------------------------------------------------------

@@ -60,4 +60,6 @@ QStringList qSlicerStylePlugin::keys() const
   return QStringList() << "Slicer" <<"Dark Slicer";
 }
 
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
 Q_EXPORT_PLUGIN2(qSlicerStylePlugin, qSlicerStylePlugin)
+#endif

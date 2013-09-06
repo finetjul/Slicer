@@ -42,7 +42,9 @@
 #include "vtkMRMLColorLogic.h"
 
 //-----------------------------------------------------------------------------
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
 Q_EXPORT_PLUGIN2(qSlicerModelsModule, qSlicerModelsModule);
+#endif
 
 //-----------------------------------------------------------------------------
 /// \ingroup Slicer_QtModules_Models

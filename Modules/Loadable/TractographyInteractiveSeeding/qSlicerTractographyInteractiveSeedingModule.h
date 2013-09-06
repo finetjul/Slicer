@@ -10,9 +10,13 @@ class qSlicerTractographyInteractiveSeedingModulePrivate;
 class qSlicerTractographyInteractiveSeedingModuleWidget;
 
 /// \ingroup Slicer_QtModules_TractographyInteractiveSeeding
-class Q_SLICER_QTMODULES_TRACTOGRAPHYINTERACTIVESEEDING_EXPORT qSlicerTractographyInteractiveSeedingModule : public qSlicerLoadableModule
+class Q_SLICER_QTMODULES_TRACTOGRAPHYINTERACTIVESEEDING_EXPORT qSlicerTractographyInteractiveSeedingModule
+  : public qSlicerLoadableModule
 {
   Q_OBJECT
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+  Q_PLUGIN_METADATA(IID "org.slicer.TractographyInteractiveSeeding")
+#endif
   Q_INTERFACES(qSlicerLoadableModule);
 public:
   typedef qSlicerLoadableModule Superclass;

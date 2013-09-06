@@ -111,12 +111,16 @@ void qMRMLSceneViewsTreeViewPrivate::init()
   q->setMouseTracking(true);
 
   // set the column widths
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+  q->header()->setSectionResizeMode(QHeaderView::ResizeToContents);
+#else
   q->header()->setResizeMode(QHeaderView::ResizeToContents);
 //  q->header()->setResizeMode(qMRMLSceneViewsModel::NameColumn, (QHeaderView::ResizeToContents));
 ////  q->header()->setResizeMode(qMRMLSceneViewsModel::IDColumn, (QHeaderView::ResizeToContents));
 //  q->header()->setResizeMode(qMRMLSceneViewsModel::ThumbnailColumn, (QHeaderView::ResizeToContents));
 //  q->header()->setResizeMode(qMRMLSceneViewsModel::RestoreColumn, (QHeaderView::ResizeToContents));
 //  q->header()->setResizeMode(qMRMLSceneViewsModel::DescriptionColumn, (QHeaderView::ResizeToContents));
+#endif
 
   q->header()->moveSection(qMRMLSceneViewsModel::NameColumn, qMRMLSceneViewsModel::RestoreColumn);
   //q->hideColumn(qMRMLSceneViewsModel::IDColumn);

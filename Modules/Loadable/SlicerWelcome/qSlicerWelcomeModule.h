@@ -32,10 +32,13 @@ class qSlicerAbstractModuleWidget;
 class qSlicerWelcomeModulePrivate;
 
 /// \ingroup Slicer_QtModules_SlicerWelcome
-class Q_SLICER_QTMODULES_WELCOME_EXPORT qSlicerWelcomeModule :
-  public qSlicerLoadableModule
+class Q_SLICER_QTMODULES_WELCOME_EXPORT qSlicerWelcomeModule
+  : public qSlicerLoadableModule
 {
   Q_OBJECT
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+  Q_PLUGIN_METADATA(IID "org.slicer.Welcome")
+#endif
   Q_INTERFACES(qSlicerLoadableModule);
 
 public:

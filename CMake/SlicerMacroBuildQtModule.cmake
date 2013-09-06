@@ -116,18 +116,32 @@ macro(slicerMacroBuildQtModule)
   # Sources
   #-----------------------------------------------------------------------------
   set(QTMODULE_MOC_OUTPUT)
-  QT4_WRAP_CPP(QTMODULE_MOC_OUTPUT ${QTMODULE_MOC_SRCS})
   set(QTMODULE_UI_CXX)
-  QT4_WRAP_UI(QTMODULE_UI_CXX ${QTMODULE_UI_SRCS})
   set(QTMODULE_QRC_SRCS)
-  if(DEFINED QTMODULE_RESOURCES)
-    QT4_ADD_RESOURCES(QTMODULE_QRC_SRCS ${QTMODULE_RESOURCES})
-  endif()
 
-  if(NOT EXISTS ${Slicer_LOGOS_RESOURCE})
-    message("Warning, Slicer_LOGOS_RESOURCE doesn't exist: ${Slicer_LOGOS_RESOURCE}")
+  if (Slicer_QT_VERSION VERSION_EQUAL "4")
+    QT4_WRAP_CPP(QTMODULE_MOC_OUTPUT ${QTMODULE_MOC_SRCS})
+    QT4_WRAP_UI(QTMODULE_UI_CXX ${QTMODULE_UI_SRCS})
+    if(DEFINED QTMODULE_RESOURCES)
+      QT4_ADD_RESOURCES(QTMODULE_QRC_SRCS ${QTMODULE_RESOURCES})
+    endif()
+
+    if(NOT EXISTS ${Slicer_LOGOS_RESOURCE})
+      message("Warning, Slicer_LOGOS_RESOURCE doesn't exist: ${Slicer_LOGOS_RESOURCE}")
+    endif()
+    QT4_ADD_RESOURCES(QTMODULE_QRC_SRCS ${Slicer_LOGOS_RESOURCE})
+  else()
+    QT5_WRAP_CPP(QTMODULE_MOC_OUTPUT ${QTMODULE_MOC_SRCS})
+    QT5_WRAP_UI(QTMODULE_UI_CXX ${QTMODULE_UI_SRCS})
+    if(DEFINED QTMODULE_RESOURCES)
+      QT5_ADD_RESOURCES(QTMODULE_QRC_SRCS ${QTMODULE_RESOURCES})
+    endif()
+
+    if(NOT EXISTS ${Slicer_LOGOS_RESOURCE})
+      message("Warning, Slicer_LOGOS_RESOURCE doesn't exist: ${Slicer_LOGOS_RESOURCE}")
+    endif()
+    QT5_ADD_RESOURCES(QTMODULE_QRC_SRCS ${Slicer_LOGOS_RESOURCE})
   endif()
-  QT4_ADD_RESOURCES(QTMODULE_QRC_SRCS ${Slicer_LOGOS_RESOURCE})
 
   set_source_files_properties(
     ${QTMODULE_SRCS} # For now, let's prevent the module widget from being wrapped

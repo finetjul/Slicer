@@ -31,7 +31,9 @@
 #include "qSlicerDoubleArraysModule.h"
 
 //-----------------------------------------------------------------------------
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
 Q_EXPORT_PLUGIN2(qSlicerDoubleArraysModule, qSlicerDoubleArraysModule);
+#endif
 
 //-----------------------------------------------------------------------------
 /// \ingroup Slicer_QtModules_ExtensionTemplate

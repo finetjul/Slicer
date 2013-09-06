@@ -7,10 +7,17 @@ set(KIT_TEST_SRCS
   )
 
 #-----------------------------------------------------------------------------
-QT4_GENERATE_MOCS(
-  qMRMLNodeAttributeTableViewTest.cxx
-  qMRMLNodeAttributeTableWidgetTest.cxx
-  )
+if (Slicer_QT_VERSION VERSION_EQUAL "4")
+  QT4_GENERATE_MOCS(
+    qMRMLNodeAttributeTableViewTest.cxx
+    qMRMLNodeAttributeTableWidgetTest.cxx
+    )
+else()
+  QT5_GENERATE_MOCS(
+    qMRMLNodeAttributeTableViewTest.cxx
+    qMRMLNodeAttributeTableWidgetTest.cxx
+    )
+endif()
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 

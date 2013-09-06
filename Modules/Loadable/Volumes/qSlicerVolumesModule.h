@@ -34,6 +34,9 @@ class Q_SLICER_QTMODULES_VOLUMES_EXPORT qSlicerVolumesModule :
   public qSlicerLoadableModule
 {
   Q_OBJECT
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+  Q_PLUGIN_METADATA(IID "org.slicer.Volumes")
+#endif
   Q_INTERFACES(qSlicerLoadableModule);
 
 public:
