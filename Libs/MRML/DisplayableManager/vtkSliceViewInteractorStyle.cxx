@@ -274,6 +274,12 @@ void vtkSliceViewInteractorStyle::OnLeftButtonUp()
 //----------------------------------------------------------------------------
 void vtkSliceViewInteractorStyle::OnMouseMove()
 {
+  if (!this->SliceLogic)
+    {
+    vtkWarningMacro("No slice logic.");
+    this->Superclass::OnMouseMove();
+    return;
+    }
   vtkMRMLSliceNode *sliceNode = this->SliceLogic->GetSliceNode();
   vtkMRMLSliceCompositeNode *sliceCompositeNode = this->SliceLogic->GetSliceCompositeNode();
   int windowX, windowY;

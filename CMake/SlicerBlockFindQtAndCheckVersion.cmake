@@ -24,28 +24,43 @@
 #
 
 macro(__SlicerBlockFindQtAndCheckVersion_find_qt)
-  find_package(Qt4)
-  if(NOT QT4_FOUND)
-    message(FATAL_ERROR "error: Qt ${Slicer_REQUIRED_QT_VERSION} or Qt ${Slicer_EXPERIMENTAL_QT_VERSION} was not found on your system. You probably need to set the QT_QMAKE_EXECUTABLE variable.")
+  set(qtproject)
+  set(command_separated_module_list)
+
+  if (Slicer_QT_VERSION VERSION_GREATER "4")
+    foreach(module ${Slicer_REQUIRED_QT_MODULES})
+      find_package(Qt5${module} REQUIRED)
+      set(command_separated_module_list "${command_separated_module_list}${module}, ")
+    endforeach()
+    set(qtproject "Qt5Core")
+  else()
+    find_package(Qt4)
+    set(qtproject "QT")
+    if(NOT QT4_FOUND)
+      message(FATAL_ERROR "error: Qt ${Slicer_REQUIRED_QT_VERSION} or Qt ${Slicer_EXPERIMENTAL_QT_VERSION} was not found on your system. You probably need to set the QT_QMAKE_EXECUTABLE variable.")
+    endif()
   endif()
 
   # Check version
-  if(NOT "${QT_VERSION_MAJOR}.${QT_VERSION_MINOR}.${QT_VERSION_PATCH}" VERSION_EQUAL "${Slicer_REQUIRED_QT_VERSION}"
-     AND NOT "${QT_VERSION_MAJOR}.${QT_VERSION_MINOR}.${QT_VERSION_PATCH}" VERSION_EQUAL "${Slicer_EXPERIMENTAL_QT_VERSION}")
-    message(FATAL_ERROR "error: Slicer requires Qt ${Slicer_REQUIRED_QT_VERSION} or Qt ${Slicer_EXPERIMENTAL_QT_VERSION}-- you cannot use Qt ${QT_VERSION_MAJOR}.${QT_VERSION_MINOR}.${QT_VERSION_PATCH}. ${extra_error_message}")
+  if( NOT "${${qtproject}_VERSION}" VERSION_EQUAL "${Slicer_REQUIRED_QT_VERSION}"
+      AND NOT "${QT_VERSION}" VERSION_EQUAL "${Slicer_EXPERIMENTAL_QT_VERSION}")
+    message(FATAL_ERROR "error: Slicer requires Qt ${Slicer_REQUIRED_QT_VERSION} or Qt ${Slicer_EXPERIMENTAL_QT_VERSION}-- you cannot use Qt ${QT_VERSION}. ${extra_error_message}")
   endif()
 
-  set(command_separated_module_list)
-  # Check if all expected Qt modules have been discovered
-  foreach(module ${Slicer_REQUIRED_QT_MODULES})
-    if(NOT "${QT_${module}_FOUND}")
-      message(FATAL_ERROR "error: Missing Qt module ${module}")
-    endif()
-    if(NOT ${module} STREQUAL "QTCORE" AND NOT ${module} STREQUAL "QTGUI")
-      set(QT_USE_${module} ON)
-    endif()
-    set(command_separated_module_list "${command_separated_module_list}${module}, ")
-  endforeach()
+  if (Slicer_QT_VERSION VERSION_EQUAL "4")
+    # Check if all expected Qt modules have been discovered
+    foreach(module ${Slicer_REQUIRED_QT_MODULES})
+      string(TOUPPER ${module} module_upper)
+      if(NOT "${QT_QT${module_upper}_FOUND}")
+        message(FATAL_ERROR "error: Missing Qt module ${module}")
+      endif()
+      if(NOT ${module} STREQUAL "Core" AND NOT ${module} STREQUAL "Gui")
+        set(QT_USE_QT${module_upper} ON)
+      endif()
+      set(command_separated_module_list "${command_separated_module_list}${module}, ")
+    endforeach()
+  endif()
+  message(STATUS "Configured ${PROJECT_NAME} with Qt ${${qtproject}_VERSION} (using modules: ${command_separated_module_list})")
 endmacro()
 
 # Sanity checks - Check if variable are defined
@@ -59,33 +74,32 @@ foreach(v ${expected_defined_vars})
   endif()
 endforeach()
 
-# Check QT_QMAKE_EXECUTABLE provided by VTK
-set(extra_error_message)
-if(DEFINED VTK_QT_QMAKE_EXECUTABLE)
-  #message(STATUS "Checking VTK_QT_QMAKE_EXECUTABLE ...")
-  if(NOT EXISTS "${VTK_QT_QMAKE_EXECUTABLE}")
-    message(FATAL_ERROR "error: You should probably re-configure VTK. VTK_QT_QMAKE_EXECUTABLE points to a nonexistent executable: ${VTK_QT_QMAKE_EXECUTABLE}")
+if (Slicer_QT_VERSION VERSION_EQUAL "4")
+  # Check QT_QMAKE_EXECUTABLE provided by VTK
+  set(extra_error_message)
+  if(DEFINED VTK_QT_QMAKE_EXECUTABLE)
+    #message(STATUS "Checking VTK_QT_QMAKE_EXECUTABLE ...")
+    if(NOT EXISTS "${VTK_QT_QMAKE_EXECUTABLE}")
+      message(FATAL_ERROR "error: You should probably re-configure VTK. VTK_QT_QMAKE_EXECUTABLE points to a nonexistent executable: ${VTK_QT_QMAKE_EXECUTABLE}")
+    endif()
+    set(QT_QMAKE_EXECUTABLE ${VTK_QT_QMAKE_EXECUTABLE})
+    set(extra_error_message "You should probably reconfigure VTK.")
   endif()
-  set(QT_QMAKE_EXECUTABLE ${VTK_QT_QMAKE_EXECUTABLE})
-  set(extra_error_message "You should probably reconfigure VTK.")
-  __SlicerBlockFindQtAndCheckVersion_find_qt()
-  set(qt_version_discovered_using_vtk "${QT_VERSION_MAJOR}.${QT_VERSION_MINOR}.${QT_VERSION_PATCH}")
-endif()
 
-# Check QT_QMAKE_EXECUTABLE provided by CTK
-if(DEFINED CTK_QT_QMAKE_EXECUTABLE)
-  #message(STATUS "Checking CTK_QT_QMAKE_EXECUTABLE ...")
-  if(NOT EXISTS "${CTK_QT_QMAKE_EXECUTABLE}")
-    message(FATAL_ERROR "error: You should probably re-configure CTK. CTK_QT_QMAKE_EXECUTABLE points to a nonexistent executable: ${CTK_QT_QMAKE_EXECUTABLE}")
+  # Check QT_QMAKE_EXECUTABLE provided by CTK
+  if(DEFINED CTK_QT_QMAKE_EXECUTABLE)
+    #message(STATUS "Checking CTK_QT_QMAKE_EXECUTABLE ...")
+    if(NOT EXISTS "${CTK_QT_QMAKE_EXECUTABLE}")
+      message(FATAL_ERROR "error: You should probably re-configure CTK. CTK_QT_QMAKE_EXECUTABLE points to a nonexistent executable: ${CTK_QT_QMAKE_EXECUTABLE}")
+    endif()
+    set(QT_QMAKE_EXECUTABLE ${CTK_QT_QMAKE_EXECUTABLE})
+    set(extra_error_message "You should probably reconfigure VTK.")
   endif()
-  set(QT_QMAKE_EXECUTABLE ${CTK_QT_QMAKE_EXECUTABLE})
-  set(extra_error_message "You should probably reconfigure VTK.")
-  __SlicerBlockFindQtAndCheckVersion_find_qt()
-  set(qt_version_discovered_using_ctk "${QT_VERSION_MAJOR}.${QT_VERSION_MINOR}.${QT_VERSION_PATCH}")
+
 endif()
 
 __SlicerBlockFindQtAndCheckVersion_find_qt()
 
-include(${QT_USE_FILE})
-
-message(STATUS "Configuring ${PROJECT_NAME} with Qt ${QT_VERSION_MAJOR}.${QT_VERSION_MINOR}.${QT_VERSION_PATCH} (using modules: ${command_separated_module_list})")
+if (Slicer_QT_VERSION VERSION_EQUAL "4")
+  include(${QT_USE_FILE})
+endif()

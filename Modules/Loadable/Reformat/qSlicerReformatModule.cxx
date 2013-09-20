@@ -29,8 +29,9 @@
 #include "qSlicerReformatModuleWidget.h"
 
 //------------------------------------------------------------------------------
-Q_EXPORT_PLUGIN2(qSlicerReformatModule,
-                 qSlicerReformatModule);
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
+Q_EXPORT_PLUGIN2(qSlicerReformatModule, qSlicerReformatModule);
+#endif
 
 //------------------------------------------------------------------------------
 /// \ingroup Slicer_QtModules_Reformat

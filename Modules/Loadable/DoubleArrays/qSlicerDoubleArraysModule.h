@@ -30,6 +30,9 @@ class Q_SLICER_QTMODULES_DOUBLEARRAYS_EXPORT qSlicerDoubleArraysModule :
   public qSlicerLoadableModule
 {
   Q_OBJECT
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+  Q_PLUGIN_METADATA(IID "org.slicer.DoubleArrays")
+#endif
   Q_INTERFACES(qSlicerLoadableModule);
 
 public:

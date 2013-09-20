@@ -39,7 +39,9 @@
 #include <vtkMRMLColorLogic.h>
 
 //-----------------------------------------------------------------------------
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
 Q_EXPORT_PLUGIN2(qSlicerVolumesModule, qSlicerVolumesModule);
+#endif
 
 //-----------------------------------------------------------------------------
 /// \ingroup Slicer_QtModules_Volumes

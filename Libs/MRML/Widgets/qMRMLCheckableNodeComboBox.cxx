@@ -20,7 +20,9 @@
 
 // Qt includes
 #include <QDebug>
-#include <QPlastiqueStyle>
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
+# include <QPlastiqueStyle>
+#endif
 #include <QStandardItem>
 
 // CTK includes
@@ -60,7 +62,9 @@ void qMRMLCheckableNodeComboBoxPrivate::init(QAbstractItemModel* model)
   Q_Q(qMRMLCheckableNodeComboBox);
 
   this->ComboBox = new ctkCheckableComboBox;
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
   this->ComboBox->setStyle(new QPlastiqueStyle);
+#endif
 
   this->qMRMLNodeComboBoxPrivate::init(model);
 

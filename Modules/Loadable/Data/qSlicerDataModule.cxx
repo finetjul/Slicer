@@ -51,7 +51,9 @@
 #include <vtkSmartPointer.h>
 
 //-----------------------------------------------------------------------------
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
 Q_EXPORT_PLUGIN2(qSlicerDataModule, qSlicerDataModule);
+#endif
 
 //-----------------------------------------------------------------------------
 class qSlicerDataModulePrivate

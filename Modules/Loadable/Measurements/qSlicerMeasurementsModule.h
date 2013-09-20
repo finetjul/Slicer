@@ -33,6 +33,9 @@ class Q_SLICER_QTMODULES_MEASUREMENTS_EXPORT qSlicerMeasurementsModule :
   public qSlicerLoadableModule
 {
   Q_OBJECT
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+  Q_PLUGIN_METADATA(IID "org.slicer.Measurements")
+#endif
   Q_INTERFACES(qSlicerLoadableModule);
 
 public:

@@ -28,7 +28,6 @@ set(expected_variables
   CTEST_MEMORYCHECK_COMMAND
   CTEST_SVN_COMMAND
   CTEST_GIT_COMMAND
-  QT_QMAKE_EXECUTABLE
   )
 
 if(WITH_DOCUMENTATION)
@@ -198,6 +197,7 @@ macro(run_ctest)
     # Write initial cache.
     #-----------------------------------------------------------------------------
     file(WRITE "${CTEST_BINARY_DIRECTORY}/CMakeCache.txt" "
+CMAKE_PREFIX_PATH:STRING=${CMAKE_PREFIX_PATH}
 QT_QMAKE_EXECUTABLE:FILEPATH=${QT_QMAKE_EXECUTABLE}
 GIT_EXECUTABLE:FILEPATH=${CTEST_GIT_COMMAND}
 Subversion_SVN_EXECUTABLE:FILEPATH=${CTEST_SVN_COMMAND}

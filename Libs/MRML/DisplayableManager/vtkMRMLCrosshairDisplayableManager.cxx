@@ -359,7 +359,7 @@ void vtkMRMLCrosshairDisplayableManager::vtkInternal::BuildCrosshair()
     }
 
   // Get the size of the window
-  int *screenSize = this->External->GetInteractor()->GetRenderWindow()->GetScreenSize();
+  int *screenSize = this->External->GetInteractor()->GetRenderWindow()->GetSize();
 
   // Constants in display coordinates to define the crosshair
   int negW = -1.0*screenSize[0];

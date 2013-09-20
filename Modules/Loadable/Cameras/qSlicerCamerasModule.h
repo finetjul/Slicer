@@ -35,6 +35,9 @@ class Q_SLICER_QTMODULES_CAMERAS_EXPORT qSlicerCamerasModule
   : public qSlicerLoadableModule
 {
   Q_OBJECT
+#if QT_VERSION >= QT_VERSION_CHECK(5,0,0)
+  Q_PLUGIN_METADATA(IID "org.slicer.Cameras")
+#endif
   Q_INTERFACES(qSlicerLoadableModule);
 public:
   typedef qSlicerLoadableModule Superclass;

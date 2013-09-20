@@ -309,9 +309,29 @@ if(Slicer_USE_QtTesting)
     )
 endif()
 
-QT4_WRAP_CPP(MRMLWidgets_MOC_CXX ${MRMLWidgets_MOC_SRCS})
-QT4_WRAP_UI(MRMLWidgets_UI_CXX ${MRMLWidgets_UI_SRCS})
-QT4_ADD_RESOURCES(MRMLWidgets_QRC_CXX ${MRMLWidgets_QRC_SRCS})
+if (Slicer_QT_VERSION VERSION_GREATER "4")
+  find_package(Qt5Widgets REQUIRED QUIET)
+  include_directories(${Qt5Widgets_INCLUDE_DIRS})
+  add_definitions(${Qt5Widgets_DEFINITIONS})
+
+  find_package(Qt5WebKitWidgets REQUIRED QUIET)
+  include_directories(${Qt5WebKitWidgets_INCLUDE_DIRS})
+  add_definitions(${Qt5WebKitWidgets_DEFINITIONS})
+
+  set(QT_LIBRARIES
+    ${Qt5Widgets_LIBRARIES}
+    ${Qt5WebKitWidgets_LIBRARIES}
+    )
+
+  qt5_wrap_cpp(MRMLWidgets_MOC_CXX ${MRMLWidgets_MOC_SRCS})
+  qt5_wrap_ui(MRMLWidgets_UI_CXX ${MRMLWidgets_UI_SRCS})
+  qt5_add_resources(MRMLWidgets_QRC_CXX ${MRMLWidgets_QRC_SRCS})
+
+else()
+  QT4_WRAP_CPP(MRMLWidgets_MOC_CXX ${MRMLWidgets_MOC_SRCS})
+  QT4_WRAP_UI(MRMLWidgets_UI_CXX ${MRMLWidgets_UI_SRCS})
+  QT4_ADD_RESOURCES(MRMLWidgets_QRC_CXX ${MRMLWidgets_QRC_SRCS})
+endif()
 
 source_group("Resources" FILES
   ${MRMLWidgets_UI_SRCS}

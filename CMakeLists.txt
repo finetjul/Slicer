@@ -474,19 +474,19 @@ endif()
 #-----------------------------------------------------------------------------
 # Qt - Slicer_REQUIRED_QT_MODULES
 #-----------------------------------------------------------------------------
-# Module name should be specified as they appear in FindQt4.cmake
-# For example, the module name associated with the variable QT_USE_QTXML is QTXML.
+# Module name should be specified as Qt5 modules or as they appear in FindQt4.cmake
+# For example, the module name associated with the variable QT_USE_QTXML is Xml.
 # Note that the modules will be installed when packaging.
-set(Slicer_REQUIRED_QT_MODULES QTCORE QTGUI QTNETWORK QTOPENGL QTUITOOLS QTXML
-  QTXMLPATTERNS QTWEBKIT QTSVG QTSQL)
-if(UNIX OR APPLE)
-  list(APPEND QTLIBLIST QTDBUS)
+set(Slicer_REQUIRED_QT_MODULES Core Designer Gui Network OpenGL Svg Sql UiTools WebKit WebKitWidgets Widgets Xml XmlPatterns)
+
+if(UNIX AND NOT APPLE)
+  list(APPEND Slicer_REQUIRED_QT_MODULES DBus)
 endif()
 if(Slicer_BUILD_EXTENSIONMANAGER_SUPPORT)
-  list(APPEND Slicer_REQUIRED_QT_MODULES QTSCRIPT)
+  list(APPEND Slicer_REQUIRED_QT_MODULES Script)
 endif()
 if(BUILD_TESTING)
-  list(APPEND Slicer_REQUIRED_QT_MODULES QTTEST)
+  list(APPEND Slicer_REQUIRED_QT_MODULES Test)
 endif()
 list(APPEND Slicer_REQUIRED_QT_MODULES ${Slicer_ADDITIONAL_REQUIRED_QT_MODULES})
 

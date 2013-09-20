@@ -44,13 +44,23 @@ if(BUILD_TESTING)
       )
   endif()
 
-  if(Slicer_USE_PYTHONQT)
-    QT4_GENERATE_MOCS(
-      qSlicerCorePythonManagerWithoutApplicationTest.cxx
-      )
-  endif()
+  if (Slicer_QT_VERSION VERSION_EQUAL "4")
+    if(Slicer_USE_PYTHONQT)
+      QT4_GENERATE_MOCS(
+        qSlicerCorePythonManagerWithoutApplicationTest.cxx
+        )
+    endif()
 
-  QT4_ADD_RESOURCES(Tests Resources/${KIT}Testing.qrc)
+    QT4_ADD_RESOURCES(Tests Resources/${KIT}Testing.qrc)
+  else()
+    if(Slicer_USE_PYTHONQT)
+      QT5_GENERATE_MOCS(
+        qSlicerCorePythonManagerWithoutApplicationTest.cxx
+        )
+    endif()
+
+    QT5_ADD_RESOURCES(Tests Resources/${KIT}Testing.qrc)
+  endif()
 
   add_executable(${KIT}CxxTests ${Tests})
   target_link_libraries(${KIT}CxxTests ${KIT})

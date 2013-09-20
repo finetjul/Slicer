@@ -53,7 +53,7 @@ endif()
 #-----------------------------------------------------------------------------
 # Qt - Let's check if a valid version of Qt is available
 #-----------------------------------------------------------------------------
-include(SlicerBlockFindQtAndCheckVersion)
+#include(SlicerBlockFindQtAndCheckVersion)
 
 #-----------------------------------------------------------------------------
 # Enable and setup External project global properties
@@ -420,8 +420,10 @@ ExternalProject_Add(${proj}
     # cmcurl
     -DSLICERLIBCURL_DIR:PATH=${SLICERLIBCURL_DIR}
     # Qt
-    -DSlicer_REQUIRED_QT_VERSION:STRING=${Slicer_REQUIRED_QT_VERSION}
+    -DSlicer_QT_VERSION:STRING=${Slicer_QT_VERSION}
+    -DCMAKE_PREFIX_PATH:STRING=${CMAKE_PREFIX_PATH}
     -DQT_QMAKE_EXECUTABLE:PATH=${QT_QMAKE_EXECUTABLE}
+    -DSlicer_REQUIRED_QT_VERSION:STRING=${Slicer_REQUIRED_QT_VERSION}
     # CTK
     -DCTK_DIR:PATH=${CTK_DIR}
     # DCMTK

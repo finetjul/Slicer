@@ -27,7 +27,9 @@
 #include "vtkSlicerCamerasModuleLogic.h"
 
 //-----------------------------------------------------------------------------
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
 Q_EXPORT_PLUGIN2(qSlicerCamerasModule, qSlicerCamerasModule);
+#endif
 
 //-----------------------------------------------------------------------------
 class qSlicerCamerasModulePrivate
