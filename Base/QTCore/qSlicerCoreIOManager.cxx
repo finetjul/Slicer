@@ -333,11 +333,15 @@ bool qSlicerCoreIOManager::loadNodes(const qSlicerIO::IOFileType& fileType,
     qDebug() << reader->description() << "Reader has successfully read the file"
              << parameters["fileName"].toString();
     nodes << reader->loadedNodes();
+    parametersWithFileType["loadedNodeIDs"] = nodes;
     success = true;
     break;
     }
 
-  emit newFileLoaded(parametersWithFileType);
+  if (success)
+    {
+    emit newFileLoaded(parametersWithFileType);
+    }
 
   if (loadedNodes)
     {
