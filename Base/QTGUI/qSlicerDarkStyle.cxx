@@ -46,7 +46,7 @@ QPalette qSlicerDarkStyle::standardPalette()const
   // From darkest to lightest
   palette.setColor(QPalette::Shadow, "#0d0d0f");
 
-  palette.setColor(QPalette::AlternateBase, "#4d4d3f");
+  palette.setColor(QPalette::AlternateBase, "#4d4d4f");
   palette.setColor(QPalette::ToolTipBase, "#3d3d3f");
 
   // Cleanlooks style requires a window gradient if a button gradient is used.
