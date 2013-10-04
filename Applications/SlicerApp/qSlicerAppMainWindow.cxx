@@ -431,7 +431,10 @@ void qSlicerAppMainWindowPrivate::readSettings()
     {
     q->restoreGeometry(settings.value("geometry").toByteArray());
     q->restoreState(settings.value("windowState").toByteArray());
-    this->LayoutManager->setLayout(settings.value("layout").toInt());
+    if (this->LayoutManager)
+      {
+      this->LayoutManager->setLayout(settings.value("layout").toInt());
+      }
     }
   settings.endGroup();
   this->FavoriteModules << settings.value("Modules/FavoriteModules").toStringList();
@@ -455,7 +458,10 @@ void qSlicerAppMainWindowPrivate::writeSettings()
     {
     settings.setValue("geometry", q->saveGeometry());
     settings.setValue("windowState", q->saveState());
-    settings.setValue("layout", this->LayoutManager->layout());
+    if (this->LayoutManager)
+      {
+      settings.setValue("layout", this->LayoutManager->layout());
+      }
     }
   settings.endGroup();
   Self::writeRecentlyLoadedFiles(this->RecentlyLoadedFileProperties);
@@ -721,7 +727,8 @@ void qSlicerAppMainWindow::on_SDBSaveToDirectoryAction_triggered()
     return;
     }
   // pass in a screen shot
-  QWidget* widget = qSlicerApplication::application()->layoutManager()->viewport();
+  qSlicerLayoutManager* layoutManager = qSlicerApplication::application()->layoutManager();
+  QWidget* widget = layoutManager ? layoutManager->viewport() : 0;
   QImage screenShot = ctk::grabVTKWidget(widget);
   qSlicerIO::IOProperties properties;
   properties["fileName"] = saveDirName;
@@ -800,19 +807,28 @@ void qSlicerAppMainWindow::on_EditRedoAction_triggered()
 //---------------------------------------------------------------------------
 void qSlicerAppMainWindow::setLayout(int layout)
 {
-  qSlicerApplication::application()->layoutManager()->setLayout(layout);
+  if (qSlicerApplication::application()->layoutManager())
+    {
+    qSlicerApplication::application()->layoutManager()->setLayout(layout);
+    }
 }
 
 //---------------------------------------------------------------------------
 void qSlicerAppMainWindow::setLayoutNumberOfCompareViewRows(int num)
 {
-  qSlicerApplication::application()->layoutManager()->setLayoutNumberOfCompareViewRows(num);
+  if (qSlicerApplication::application()->layoutManager())
+    {
+    qSlicerApplication::application()->layoutManager()->setLayoutNumberOfCompareViewRows(num);
+    }
 }
 
 //---------------------------------------------------------------------------
 void qSlicerAppMainWindow::setLayoutNumberOfCompareViewColumns(int num)
 {
-  qSlicerApplication::application()->layoutManager()->setLayoutNumberOfCompareViewColumns(num);
+  if (qSlicerApplication::application()->layoutManager())
+    {
+    qSlicerApplication::application()->layoutManager()->setLayoutNumberOfCompareViewColumns(num);
+    }
 }
 
 //-----------------------------------------------------------------------------
