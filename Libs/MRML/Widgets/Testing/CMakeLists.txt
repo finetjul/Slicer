@@ -109,33 +109,32 @@ set(Tests_UtilityFiles
   qMRMLNodeObject.h
   )
 
-if (Slicer_QT_VERSION VERSION_EQUAL "4")
-  QT4_WRAP_CPP(Tests_MOC_CXX ${Tests_MOC_SRCS})
-  QT4_GENERATE_MOCS(
-    qMRMLCheckableNodeComboBoxTest.cxx
-    qMRMLColorModelTest.cxx
-    qMRMLDisplayNodeViewComboBoxTest.cxx
-    qMRMLLabelComboBoxTest.cxx
-    qMRMLSceneModelTest.cxx
-    qMRMLSliceControllerWidgetTest.cxx
-    )
-else()
-  QT5_WRAP_CPP(Tests_MOC_CXX ${Tests_MOC_SRCS})
-  QT5_GENERATE_MOCS(
-    qMRMLCheckableNodeComboBoxTest.cxx
-    qMRMLColorModelTest.cxx
-    qMRMLDisplayNodeViewComboBoxTest.cxx
-    qMRMLLabelComboBoxTest.cxx
-    qMRMLSceneModelTest.cxx
-    qMRMLSliceControllerWidgetTest.cxx
-    )
-endif()
+set(Tests_MOC_TO_GENERATE
+  qMRMLCheckableNodeComboBoxTest.cxx
+  qMRMLColorModelTest.cxx
+  qMRMLDisplayNodeViewComboBoxTest.cxx
+  qMRMLLabelComboBoxTest.cxx
+  qMRMLSceneModelTest.cxx
+  qMRMLSliceControllerWidgetTest.cxx
+  )
 
+if (Slicer_QT_VERSION VERSION_GREATER "4")
+  find_package(Qt5Test)
+  include_directories(${Qt5Test_INCLUDE_DIRS})
+  add_definitions(${Qt5Test_DEFINITIONS})
+  list(APPEND QT_LIBRARIES ${Qt5Test_LIBRARIES})
+
+  QT5_WRAP_CPP(Tests_MOC_CXX ${Tests_MOC_SRCS})
+  QT5_GENERATE_MOCS(${Tests_MOC_TO_GENERATE})
+else()
+  QT4_WRAP_CPP(Tests_MOC_CXX ${Tests_MOC_SRCS})
+  QT4_GENERATE_MOCS(${Tests_MOC_TO_GENERATE})
+endif()
 
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 
 add_executable(${KIT}CxxTests ${Tests} ${Tests_MOC_CXX} ${Tests_UtilityFiles})
-target_link_libraries(${KIT}CxxTests ${KIT})
+target_link_libraries(${KIT}CxxTests ${KIT} ${QT_LIBRARIES})
 
 macro(SCENE_TEST TESTNAME SCENEFILENAME)
   add_test(

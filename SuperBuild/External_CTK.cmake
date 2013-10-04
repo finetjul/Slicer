@@ -74,8 +74,8 @@ if(NOT DEFINED CTK_DIR)
   endif()
 
   ExternalProject_Add(${proj}
-    GIT_REPOSITORY "${git_protocol}://github.com/finetjul/CTK.git"
-    GIT_TAG "47b34216588caf1a6be6aeca93ef24c9bbaf248a"
+    GIT_REPOSITORY "${git_protocol}@github.com:Curexo/CTK.git"
+    GIT_TAG "6880d90183aed861fea8789cdb4192281e966343"
     SOURCE_DIR ${CMAKE_BINARY_DIR}/${proj}
     BINARY_DIR ${proj}-build
     CMAKE_GENERATOR ${gen}

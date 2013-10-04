@@ -63,6 +63,15 @@ macro(__SlicerBlockFindQtAndCheckVersion_find_qt)
   message(STATUS "Configured ${PROJECT_NAME} with Qt ${${qtproject}_VERSION} (using modules: ${command_separated_module_list})")
 endmacro()
 
+macro(find_and_use_qt_packages)
+  foreach(qt_package ${ARGN})
+    find_package(${qt_package})
+    add_definitions(${${qt_package}_DEFINITIONS})
+    include_directories(${${qt_package}_INCLUDE_DIRS})
+    list(APPEND QT_LIBRARIES ${${qt_package}_LIBRARIES})
+  endforeach()
+endmacro()
+
 # Sanity checks - Check if variable are defined
 set(expected_defined_vars
   Slicer_REQUIRED_QT_VERSION
