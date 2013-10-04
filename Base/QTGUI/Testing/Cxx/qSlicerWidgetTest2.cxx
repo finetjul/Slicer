@@ -168,7 +168,7 @@ int qSlicerWidgetTest2(int argc, char * argv[] )
   QProcessEnvironment env;
   QString qarchetype = env.value("SLICER_HOME", "");
   qarchetype.append("share/MRML/Testing/TestData/fixed.nrrd");
-  QByteArray archetype = qarchetype.toAscii();
+  QByteArray archetype = qarchetype.toLatin1();
 
   vtkMRMLSliceLogic *sliceLogic = setupSliceDisplay( 
           scene, vtkWidget->GetRenderWindow(), archetype.data() );

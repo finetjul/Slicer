@@ -84,6 +84,12 @@ macro(SlicerMacroConfigureModuleCxxTestDriver)
       set(${SLICER_TEST_DRIVER_TESTS_TO_RUN_VAR} ${TestsToRun})
     endif()
 
+    if(Slicer_QT_VERSION VERSION_GREATER "4")
+      find_package(Qt5Test)
+      include_directories(${Qt5Test_INCLUDE_DIRS})
+      list(APPEND QT_LIBRARIES ${Qt5Test_LIBRARIES})
+      list(APPEND SLICER_TEST_DRIVER_TARGET_LIBRARIES ${QT_LIBRARIES})
+    endif()
     add_executable(${SLICER_TEST_DRIVER_NAME}CxxTests ${Tests})
     set_target_properties(${SLICER_TEST_DRIVER_NAME}CxxTests
       PROPERTIES

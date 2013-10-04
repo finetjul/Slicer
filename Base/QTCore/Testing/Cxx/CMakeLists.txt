@@ -33,37 +33,41 @@ if(BUILD_TESTING)
     EXTRA_INCLUDE vtkMRMLDebugLeaksMacro.h
     )
 
-  QT4_GENERATE_MOCS(
+  set(mocs_to_generate
     qSlicerSslTest.cxx
+    )
+  set(resources
+    Resources/${KIT}Testing.qrc
     )
 
   if(Slicer_BUILD_EXTENSIONMANAGER_SUPPORT)
-    QT4_GENERATE_MOCS(
+    list(APPEND mocs_to_generate
       qSlicerExtensionsManagerModelTest.cxx
       qSlicerPersistentCookieJarTest.cxx
       )
   endif()
 
-  if (Slicer_QT_VERSION VERSION_EQUAL "4")
-    if(Slicer_USE_PYTHONQT)
-      QT4_GENERATE_MOCS(
-        qSlicerCorePythonManagerWithoutApplicationTest.cxx
-        )
-    endif()
+  if(Slicer_USE_PYTHONQT)
+    list(APPEND mocs_to_generate
+      qSlicerCorePythonManagerWithoutApplicationTest.cxx
+      )
+  endif()
 
-    QT4_ADD_RESOURCES(Tests Resources/${KIT}Testing.qrc)
+  if (Slicer_QT_VERSION VERSION_GREATER "4")
+    find_package(Qt5Test)
+    include_directories(${Qt5Test_INCLUDE_DIRS})
+    add_definitions(${Qt5Test_DEFINITIONS})
+    list(APPEND QT_LIBRARIES ${Qt5Test_LIBRARIES})
+
+    QT5_GENERATE_MOCS(${mocs_to_generate})
+    QT5_ADD_RESOURCES(Tests ${resources})
   else()
-    if(Slicer_USE_PYTHONQT)
-      QT5_GENERATE_MOCS(
-        qSlicerCorePythonManagerWithoutApplicationTest.cxx
-        )
-    endif()
-
-    QT5_ADD_RESOURCES(Tests Resources/${KIT}Testing.qrc)
+    QT4_GENERATE_MOCS(${mocs_to_generate})
+    QT4_ADD_RESOURCES(Tests ${resources})
   endif()
 
   add_executable(${KIT}CxxTests ${Tests})
-  target_link_libraries(${KIT}CxxTests ${KIT})
+  target_link_libraries(${KIT}CxxTests ${KIT} ${QT_LIBRARIES})
   set_target_properties(${KIT}CxxTests PROPERTIES LABELS ${KIT})
 
   #

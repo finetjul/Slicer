@@ -35,34 +35,30 @@ if(BUILD_TESTING)
 
   set(KIT_TEST_MOC_SRCS
     )
-  if (Slicer_QT_VERSION VERSION_EQUAL "4")
-    if(Slicer_USE_PYTHONQT)
-      list(APPEND KIT_TEST_MOC_SRCS
-        qSlicerLoadableModuleWithPythonTest.cxx
-        qSlicerPythonManagerWithoutApplicationTest.cxx
-        qSlicerScriptedLoadableModuleTest.cxx
-        qSlicerScriptedLoadableModuleWidgetTest.cxx
-        )
-      QT4_GENERATE_MOCS(${KIT_TEST_MOC_SRCS})
-    endif()
+  if(Slicer_USE_PYTHONQT)
+    list(APPEND KIT_TEST_MOC_SRCS
+      qSlicerLoadableModuleWithPythonTest.cxx
+      qSlicerPythonManagerWithoutApplicationTest.cxx
+      qSlicerScriptedLoadableModuleTest.cxx
+      qSlicerScriptedLoadableModuleWidgetTest.cxx
+      )
+  endif()
 
-    QT4_ADD_RESOURCES(Tests Resources/${KIT}Testing.qrc)
-  else()
-    if(Slicer_USE_PYTHONQT)
-      list(APPEND KIT_TEST_MOC_SRCS
-        qSlicerLoadableModuleWithPythonTest.cxx
-        qSlicerPythonManagerWithoutApplicationTest.cxx
-        qSlicerScriptedLoadableModuleTest.cxx
-        qSlicerScriptedLoadableModuleWidgetTest.cxx
-        )
-      QT5_GENERATE_MOCS(${KIT_TEST_MOC_SRCS})
-    endif()
+  if (Slicer_QT_VERSION VERSION_GREATER "4")
+    find_package(Qt5Test)
+    include_directories(${Qt5Test_INCLUDE_DIRS})
+    add_definitions(${Qt5Test_DEFINITIONS})
+    list(APPEND QT_LIBRARIES ${Qt5Test_LIBRARIES})
 
+    QT5_GENERATE_MOCS(${KIT_TEST_MOC_SRCS})
     QT5_ADD_RESOURCES(Tests Resources/${KIT}Testing.qrc)
+  else()
+    QT4_GENERATE_MOCS(${KIT_TEST_MOC_SRCS})
+    QT4_ADD_RESOURCES(Tests Resources/${KIT}Testing.qrc)
   endif()
 
   add_executable(${KIT}CxxTests ${Tests})
-  target_link_libraries(${KIT}CxxTests ${KIT})
+  target_link_libraries(${KIT}CxxTests ${KIT} ${QT_LIBRARIES})
   set_target_properties(${KIT}CxxTests PROPERTIES LABELS ${KIT})
 
   #

@@ -724,6 +724,7 @@ include(${VTK_USE_FILE})
 #-----------------------------------------------------------------------------
 # CTK
 #-----------------------------------------------------------------------------
+set(CTK_QT_VERSION ${Slicer_QT_VERSION})
 find_package(CTK REQUIRED)
 include(${CTK_USE_FILE})
 
