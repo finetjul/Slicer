@@ -232,7 +232,7 @@ void vtkMRMLSliceLogic::UpdateSliceNode()
     this->SetSliceNode (0);
     }
 
-  if ( this->SliceNode == 0 )
+  if ( this->SliceNode == 0 || strcmp(this->SliceNode->GetLayoutName(), this->GetName()))
     {
     if ( node == 0 )
       {
@@ -316,7 +316,10 @@ void vtkMRMLSliceLogic::UpdateSliceCompositeNode()
     this->SetSliceCompositeNode (0);
     }
 
-  if ( this->SliceCompositeNode == 0 )
+  if ( this->SliceCompositeNode == 0
+       // Maybe the slice logic changed name, it should then create a new node
+       // if needed.
+       || strcmp(this->SliceCompositeNode->GetLayoutName(), this->GetName()))
     {
     if ( node == 0 )
       {
