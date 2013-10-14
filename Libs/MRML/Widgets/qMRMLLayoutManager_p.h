@@ -80,6 +80,7 @@ public:
 
   /// Delete slice viewer associated with \a sliceNode
   void removeSliceView(vtkMRMLSliceNode* sliceNode);
+  void removeSliceView(qMRMLSliceWidget* viewToRemove);
 
   /// Instantiate a 3D Viewer corresponding to \a viewNode
   virtual qMRMLThreeDWidget* createThreeDWidget(vtkMRMLViewNode* viewNode);

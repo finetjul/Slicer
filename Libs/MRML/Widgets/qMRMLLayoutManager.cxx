@@ -65,10 +65,15 @@ qMRMLLayoutManagerPrivate::qMRMLLayoutManagerPrivate(qMRMLLayoutManager& object)
 //------------------------------------------------------------------------------
 qMRMLLayoutManagerPrivate::~qMRMLLayoutManagerPrivate()
 {
+  foreach(qMRMLSliceWidget* sliceWidget, this->SliceWidgetList)
+    {
+    this->removeSliceView(sliceWidget);
+    }
+
   if (this->MRMLSliceLogics)
     {
-    this->MRMLSliceLogics->RemoveAllItems();
     this->MRMLSliceLogics->Delete();
+    this->MRMLSliceLogics = 0;
     }
   this->MRMLLayoutLogic->Delete();
   this->MRMLLayoutLogic = 0;
@@ -341,9 +346,16 @@ void qMRMLLayoutManagerPrivate::removeSliceView(vtkMRMLSliceNode* sliceNode)
 
   qMRMLSliceWidget * sliceWidgetToDelete = this->sliceWidget(sliceNode);
   Q_ASSERT(sliceWidgetToDelete);
+  this->removeSliceView(sliceWidgetToDelete);
+}
 
+// --------------------------------------------------------------------------
+void qMRMLLayoutManagerPrivate
+::removeSliceView(qMRMLSliceWidget* sliceWidgetToDelete)
+{
   // Remove slice widget
   this->SliceWidgetList.removeAll(sliceWidgetToDelete);
+  this->MRMLSliceLogics->RemoveItem(sliceWidgetToDelete->sliceLogic());
   delete sliceWidgetToDelete;
 }
 
