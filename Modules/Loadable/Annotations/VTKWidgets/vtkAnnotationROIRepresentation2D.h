@@ -106,8 +106,6 @@ public:
   virtual void WidgetInteraction(double e[2]);
   virtual void SetInteractionState(int state);
 
-  virtual void SizeHandles();
-
   virtual int HighlightHandle(vtkProp *prop);
   virtual void HighlightFace(int cellId);
 
@@ -116,10 +114,6 @@ public:
 protected:
   vtkAnnotationROIRepresentation2D();
   ~vtkAnnotationROIRepresentation2D();
-  
-  /// A face of the hexahedron
-  vtkActor2D          *HexFace2D;
-  vtkPolyDataMapper2D *HexFaceMapper2D;
 
   /// glyphs representing hot spots (e.g., handles)
   vtkActor2D          **Handle2D;
@@ -146,7 +140,8 @@ protected:
 
   void CreateFaceIntersections();
 
-  double ComputeHandleRadiusInWorldCoordinates(double radInPixels);
+  /// Return the radius of the handles.
+  virtual double ComputeHandleRadiusInWorldCoordinates(double radInPixels);
 
   virtual void CreateDefaultProperties();
   virtual void PositionHandles();

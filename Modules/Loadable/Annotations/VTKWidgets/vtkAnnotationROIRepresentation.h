@@ -289,6 +289,8 @@ protected:
 
   vtkMatrix4x4   *WorldToLocalMatrix;
 
+  virtual double ComputeHandleRadiusInWorldCoordinates(double radInPixels);
+
   int HandleVisibility;
 
   //"dir" is the direction in which the face can be moved i.e. the axis passing

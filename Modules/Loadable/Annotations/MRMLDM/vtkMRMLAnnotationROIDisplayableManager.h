@@ -19,11 +19,17 @@
 // Annotation includes
 #include "vtkMRMLAnnotationDisplayableManager.h"
 
+class vtkAnnotationROIWidget;
+class vtkAnnotationROIWidget2D;
 class vtkMRMLAnnotationROINode;
 class vtkSlicerViewerWidget;
 class vtkMRMLAnnotationROIDisplayNode;
 class vtkMRMLAnnotationPointDisplayNode;
 class vtkMRMLAnnotationLineDisplayNode;
+
+// VTK includes
+class vtkMatrix4x4;
+class vtkPlane;
 class vtkTextWidget;
 
 /// \ingroup Slicer_QtModules_Annotation
@@ -52,7 +58,12 @@ protected:
 
   /// Propagate properties of MRML node to widget.
   virtual void PropagateMRMLToWidget(vtkMRMLAnnotationNode* node, vtkAbstractWidget * widget);
-  virtual void PropagateMRMLToWidget2D(vtkMRMLAnnotationNode* node, vtkAbstractWidget * widget);
+
+  void Update3DTransform(vtkMRMLAnnotationROINode* roiNode, vtkAnnotationROIWidget* widget);
+  void Update2DTransform(vtkMRMLAnnotationROINode* roiNode, vtkAnnotationROIWidget2D* widget);
+  /// Compute plane properties from a matrix
+  /// \sa vtkMRMLModelSliceDisplayableManager::Internal::SetSlicePlaneFromMatrix
+  void SetSlicePlaneFromMatrix(vtkMatrix4x4* matrix, vtkPlane* plane);
 
   /// Propagate properties of widget to MRML node.
   virtual void PropagateWidgetToMRML(vtkAbstractWidget * widget, vtkMRMLAnnotationNode* node);

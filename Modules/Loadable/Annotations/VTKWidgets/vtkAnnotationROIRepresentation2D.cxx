@@ -71,17 +71,9 @@ vtkAnnotationROIRepresentation2D::vtkAnnotationROIRepresentation2D()
   this->LastPicker2D = NULL;
 
   this->HandleSize = 4.0;
-  this->HandleVisibility = 1;
-  
+
   // Set up the initial properties
   this->CreateDefaultProperties();
-
-  // The face of the hexahedra
-  this->HexFaceMapper2D = vtkPolyDataMapper2D::New();
-  this->HexFaceMapper2D->SetInput(HexFacePolyData);
-  this->HexFace2D = vtkActor2D::New();
-  this->HexFace2D->SetMapper(this->HexFaceMapper2D);
-  //this->HexFace2D->SetProperty(this->FaceProperty);
 
   // Create the handles
   this->Handle2D = new vtkActor2D* [7];
@@ -105,8 +97,6 @@ vtkAnnotationROIRepresentation2D::vtkAnnotationROIRepresentation2D()
   int i;
   for (i=0; i<7; i++)
     {
-    this->HandleGeometry[i]->SetRadius(0);
-
     this->HandleToPlaneTransformFilters[i] = vtkTransformPolyDataFilter::New();
     this->HandleToPlaneTransformFilters[i]->SetInput(this->HandleGeometry[i]->GetOutput());
     this->HandleToPlaneTransformFilters[i]->SetTransform(this->WorldToDisplayTransform);
@@ -114,18 +104,14 @@ vtkAnnotationROIRepresentation2D::vtkAnnotationROIRepresentation2D()
     this->HandleMapper2D[i] = vtkPolyDataMapper2D::New();
     this->HandleMapper2D[i]->SetInput(this->HandleToPlaneTransformFilters[i]->GetOutput());
     this->Handle2D[i] = vtkActor2D::New();
-    //this->Handle2D[i]->SetProperty(this->HandleProperties[i]);
     this->Handle2D[i]->SetMapper(this->HandleMapper2D[i]);
 
     this->HandlePicker2D->AddPickList(this->Handle2D[i]);
     this->Handle2D[i]->SetProperty(this->HandleProperties2D[i]);
-    //this->Handle2D[i]->SetVisibility(0);
     }
 
   this->LastPicker2D = NULL;
   this->CurrentHandle2D = NULL;
-  
-  this->PositionHandles();
 
 }
 
@@ -133,8 +119,6 @@ vtkAnnotationROIRepresentation2D::vtkAnnotationROIRepresentation2D()
 vtkAnnotationROIRepresentation2D::~vtkAnnotationROIRepresentation2D()
 {  
   this->HandlePicker2D->Delete();
-  this->HexFace2D->Delete();
-  this->HexFaceMapper2D->Delete();
   int i;
   for (i=0; i<7; i++)
     {
@@ -212,8 +196,6 @@ void vtkAnnotationROIRepresentation2D::CreateFaceIntersections()
 
     this->IntersectionActors[i] = vtkActor2D::New();
     this->IntersectionActors[i]->SetMapper(this->IntersectionMappers[i]);
-
-    //this->GetRenderer()->AddActor2D(this->IntersectionActors[i]);
     }
 }
 
@@ -226,14 +208,15 @@ void vtkAnnotationROIRepresentation2D::BuildRepresentation()
        (this->Renderer && this->Renderer->GetVTKWindow() &&
         this->Renderer->GetVTKWindow()->GetMTime() > this->BuildTime) )
     {
-    this->Superclass::BuildRepresentation();
+    this->PositionHandles();
+    this->SizeHandles();
 
     // Handle visibility
     bool atLeast1HandleVisible = false;
     for (int i=0; i < 6; ++i)
       {
       bool visible = this->HandleVisibility
-          && this->IntersectionCutters[i]->GetOutput()->GetNumberOfLines() > 0;
+        && (this->IntersectionCutters[i]->GetOutput()->GetNumberOfLines() > 0);
       this->Handle2D[i]->SetVisibility(visible);
       atLeast1HandleVisible = atLeast1HandleVisible || visible;
       }
@@ -252,7 +235,6 @@ void vtkAnnotationROIRepresentation2D::GetActors(vtkPropCollection *vtkNotUsed(a
 //----------------------------------------------------------------------
 void vtkAnnotationROIRepresentation2D::GetActors2D(vtkPropCollection *actors)
 {
-  //actors->AddItem(this->HexFace2D);
   this->GetIntersectionActors(actors);
   for (int i=0; i<7; i++)
     {
@@ -406,69 +388,42 @@ void vtkAnnotationROIRepresentation2D::PrintSelf(ostream& os, vtkIndent indent)
 //----------------------------------------------------------------------------
 void vtkAnnotationROIRepresentation2D::PositionHandles()
 {
-  int i;
-  double *pts =
-     static_cast<vtkDoubleArray *>(this->Points->GetData())->GetPointer(0);
-  double *p0 = pts;
-  //double *p1 = pts + 3*1;
-  //double *p2 = pts + 3*2;
-  //double *p3 = pts + 3*3;
-  //double *p4 = pts + 3*4;
-  //double *p5 = pts + 3*5;
-  double *p6 = pts + 3*6;
-  //double *p7 = pts + 3*7;
-  double x[3];
-
-  double radius = this->ComputeHandleRadiusInWorldCoordinates(this->HandleSize);
-
-  int count=0;
   this->Points->GetData()->Modified();
-  for (i=0; i<6; i++)
+  this->Points->Modified();
+  for (int i=0; i<6; i++)
     {
+    // Update edges
     this->IntersectionFaces[i]->Modified();
     this->IntersectionCutters[i]->Update();
-    this->IntersectionPlaneTransformFilters[i]->Update();
-
-    if (this->IntersectionCutters[i]->GetOutput()->GetNumberOfLines() > 0)
+    vtkPolyData* roiEdge = this->IntersectionCutters[i]->GetOutput();
+    if (roiEdge->GetNumberOfLines() == 0)
       {
-      double pi0[3];
-      double pi1[3];
-      this->IntersectionCutters[i]->GetOutput()->GetPoint(0, pi0);
-      this->IntersectionCutters[i]->GetOutput()->GetPoint(1, pi1);
-      VTK_AVERAGE(pi0,pi1,x);
-      this->Points->SetPoint(8+i, x);
-      this->HandleGeometry[i]->SetRadius(/*this->HandlesVisibility**/radius);
-      //this->Handle2D[i]->SetVisibility(this->HandlesVisibility);
-      count++;
+      continue;
       }
-    else
-      {
-      //this->HandleGeometry[i]->SetRadius(0);
-      //this->Handle2D[i]->SetVisibility(0);
-      }
+    // Update handles
+    double pi0[3];
+    double pi1[3];
+    roiEdge->GetPoint(0, pi0);
+    roiEdge->GetPoint(1, pi1);
+    double x[3];
+    VTK_AVERAGE(pi0,pi1,x);
+    this->Points->SetPoint(8+i, x);
+    this->HandleGeometry[i]->SetCenter(x);
     }
-    
+
+  // Update center handle
+  double p0[3] = {0.,0.,0.};
+  double p6[3] = {0.,0.,0.};
+  this->Points->GetPoint(0, p0);
+  this->Points->GetPoint(6, p6);
+  double x[3];
   VTK_AVERAGE(p0,p6,x);
-  this->Points->SetPoint(14, x);
-  if (count)
-    {
-    this->HandleGeometry[6]->SetRadius(/*this->HandlesVisibility**/radius);
-    //this->Handle2D[6]->SetVisibility(this->HandlesVisibility);
-    }
-  else
-    {
-    //this->HandleGeometry[6]->SetRadius(0);
-    //this->Handle2D[6]->SetVisibility(0);
-    }
-
-  for (i = 0; i < 7; ++i)
-    {
-    this->HandleGeometry[i]->SetCenter(this->Points->GetPoint(8+i));
-    this->HandleToPlaneTransformFilters[i]->Update();
-    }
+  this->Points->SetPoint(8+6, x);
+  this->HandleGeometry[6]->SetCenter(x);
 
   this->Points->GetData()->Modified();
-
+  this->Points->Modified();
+  this->GenerateOutline();
 }
 
 #undef VTK_AVERAGE
@@ -478,7 +433,8 @@ void vtkAnnotationROIRepresentation2D::PositionHandles()
 void vtkAnnotationROIRepresentation2D::WidgetInteraction(double e[2])
 {
   // Convert events to appropriate coordinate systems
-  vtkCamera *camera = this->Renderer->IsActiveCameraCreated() ? this->Renderer->GetActiveCamera() : NULL;
+  vtkCamera *camera = this->Renderer->IsActiveCameraCreated() ?
+    this->Renderer->GetActiveCamera() : NULL;
   if ( !camera )
     {
     return;
@@ -613,18 +569,9 @@ int vtkAnnotationROIRepresentation2D::ComputeInteractionState(int X, int Y, int 
 }
 
 //----------------------------------------------------------------------------
-double vtkAnnotationROIRepresentation2D::ComputeHandleRadiusInWorldCoordinates(double radInPixels)
+double vtkAnnotationROIRepresentation2D
+::ComputeHandleRadiusInWorldCoordinates(double radInPixels)
 {
-  /*
-  double *center 
-    = static_cast<vtkDoubleArray *>(this->Points->GetData())->GetPointer(3*14);
-
-  double radius =
-      this->vtkWidgetRepresentation::SizeHandlesInPixels(1.5,center);
-  return radius;
-  */
-
- 
   // Get transform from 2D image to world
   vtkSmartPointer<vtkMatrix4x4> XYtoWorldMatrix = vtkSmartPointer<vtkMatrix4x4>::New();
   XYtoWorldMatrix->DeepCopy(this->GetWorldToDisplayTransform()->GetMatrix());
@@ -643,17 +590,6 @@ double vtkAnnotationROIRepresentation2D::ComputeHandleRadiusInWorldCoordinates(d
     radius += (wxyz1[i] - wxyz0[i])*(wxyz1[i] - wxyz0[i]);
     }
   return sqrt(radius/2);
-}
-
-//----------------------------------------------------------------------------
-void vtkAnnotationROIRepresentation2D::SizeHandles()
-{
-  //double radius = this->ComputeHandleRadiusInWorldCoordinates(this->HandleSize);
-  //for(int i=0; i<7; i++)
-    //{
-    //this->HandleGeometry[i]->SetRadius(radius);
-    //this->HandleGeometry[i]->Modified();
-    //}
 }
 
 //----------------------------------------------------------------------------

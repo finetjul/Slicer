@@ -19,6 +19,8 @@
 // VTK includes
 #include "vtkActor.h"
 #include "vtkActor2D.h"
+#include "vtkMapper2D.h"
+#include "vtkPolyDataMapper2D.h"
 #include "vtkAssemblyPath.h"
 #include "vtkBox.h"
 #include "vtkCallbackCommand.h"
@@ -186,6 +188,11 @@ vtkAnnotationROIRepresentation::vtkAnnotationROIRepresentation()
 
   this->WorldToLocalMatrix = vtkMatrix4x4::New();
   this->WorldToLocalMatrix->Identity();
+
+  this->LastEventPosition[0] = 0.0;
+  this->LastEventPosition[1] = 0.0;
+  this->LastEventPosition[2] = 0.0;
+  this->LastEventPosition[3] = 1.0;
 }
 
 //----------------------------------------------------------------------------
@@ -375,7 +382,8 @@ void vtkAnnotationROIRepresentation::MoveFace(double *p1, double *p2, double *di
     x4[i] += v[i];
     x5[i] += v[i];
     }
-  this->PositionHandles();
+  //this->PositionHandles();
+  this->Modified();
 }
 
 //----------------------------------------------------------------------------
@@ -556,7 +564,8 @@ void vtkAnnotationROIRepresentation::Translate(double *p1, double *p2)
     *pts++ += v[1];
     *pts++ += v[2];
     }
-  this->PositionHandles();
+  this->Points->GetData()->Modified();
+  this->Modified();
 }
 
 //----------------------------------------------------------------------------
@@ -587,7 +596,8 @@ void vtkAnnotationROIRepresentation::Scale(double *vtkNotUsed(p1),
     pts[1] = sf * (pts[1] - center[1]) + center[1];
     pts[2] = sf * (pts[2] - center[2]) + center[2];
     }
-  this->PositionHandles();
+  this->Points->GetData()->Modified();
+  this->Modified();
 }
 
 //----------------------------------------------------------------------------
@@ -595,7 +605,7 @@ void vtkAnnotationROIRepresentation::ComputeNormals()
 {
   double *pts =
      static_cast<vtkDoubleArray *>(this->Points->GetData())->GetPointer(0);
-  double *p0 = pts;
+  double *p0 = pts + 3*0;
   double *px = pts + 3*1;
   double *py = pts + 3*3;
   double *pz = pts + 3*4;
@@ -689,9 +699,9 @@ void vtkAnnotationROIRepresentation::Rotate(int X,
     }
 
   newPts->Delete();
-  this->PositionHandles();
+  this->Modified();
 }
-  
+
 //----------------------------------------------------------------------------
 void vtkAnnotationROIRepresentation::CreateDefaultProperties()
 {
@@ -749,11 +759,10 @@ void vtkAnnotationROIRepresentation::CreateDefaultProperties()
 //----------------------------------------------------------------------------
 void vtkAnnotationROIRepresentation::PlaceWidget(double bds[6])
 {
-  int i;
   double bounds[6], center[3];
-  
+
   this->AdjustBounds(bds,bounds,center);
-  
+
   this->Points->SetPoint(0, bounds[0], bounds[2], bounds[4]);
   this->Points->SetPoint(1, bounds[1], bounds[2], bounds[4]);
   this->Points->SetPoint(2, bounds[1], bounds[3], bounds[4]);
@@ -763,18 +772,23 @@ void vtkAnnotationROIRepresentation::PlaceWidget(double bds[6])
   this->Points->SetPoint(6, bounds[1], bounds[3], bounds[5]);
   this->Points->SetPoint(7, bounds[0], bounds[3], bounds[5]);
 
-  for (i=0; i<6; i++)
+  bool modified = false;
+  for (int i=0; i<6; i++)
     {
+    modified = modified || (this->InitialBounds[i] != bounds[i]);
     this->InitialBounds[i] = bounds[i];
     }
   this->InitialLength = sqrt((bounds[1]-bounds[0])*(bounds[1]-bounds[0]) +
                              (bounds[3]-bounds[2])*(bounds[3]-bounds[2]) +
                              (bounds[5]-bounds[4])*(bounds[5]-bounds[4]));
-
-  this->PositionHandles();
-  this->ComputeNormals();
-  this->ValidPick = 1; //since we have set up widget
-  this->SizeHandles();
+  if (modified)
+    {
+    this->Points->Modified();
+    this->Points->GetData()->Modified();
+    this->Modified();
+    this->ComputeNormals();
+    this->ValidPick = 1; //since we have set up widget
+    }
 }
 
 //----------------------------------------------------------------------------
@@ -787,7 +801,6 @@ void vtkAnnotationROIRepresentation::GetCenter(double center[])
     {
     center[i] = p14[i];
     }
-
 }
 
 //----------------------------------------------------------------------------
@@ -861,7 +874,6 @@ void vtkAnnotationROIRepresentation::GetTransform(vtkTransform *t)
   
   // Orientation
   this->Matrix->Identity();
-  this->PositionHandles();
   this->ComputeNormals();
   for (i=0; i<3; i++)
     {
@@ -943,7 +955,8 @@ void vtkAnnotationROIRepresentation::SetTransform(vtkTransform* t)
   xIn[0] = bounds[0]; xIn[1]= bounds[3]; xIn[2] = bounds[5];
   t->InternalTransformPoint(xIn,pts+21);
 
-  this->PositionHandles();
+  //this->PositionHandles();
+  this->Modified();
 }
 
 //----------------------------------------------------------------------------
@@ -1040,7 +1053,7 @@ int vtkAnnotationROIRepresentation::ComputeInteractionState(int X, int Y, int vt
     this->InteractionState = vtkAnnotationROIRepresentation::Outside;
     return this->InteractionState;
     }
-  
+
   vtkAssemblyPath *path;
   // Try and pick a handle first
   this->LastPicker = NULL;
@@ -1092,7 +1105,7 @@ void vtkAnnotationROIRepresentation::SetInteractionState(int state)
   // Clamp to allowable values
   state = ( state < vtkAnnotationROIRepresentation::Outside ? vtkAnnotationROIRepresentation::Outside :
             (state > vtkAnnotationROIRepresentation::Scaling ? vtkAnnotationROIRepresentation::Scaling : state) );
-  
+
   // Depending on state, highlight appropriate parts of representation
   int handle;
   this->InteractionState = state;
@@ -1170,6 +1183,7 @@ void vtkAnnotationROIRepresentation::BuildRepresentation()
        (this->Renderer && this->Renderer->GetVTKWindow() &&
         this->Renderer->GetVTKWindow()->GetMTime() > this->BuildTime) )
     {
+    this->PositionHandles();
     this->SizeHandles();
 
     for (int i=0; i<7; i++)
@@ -1270,6 +1284,7 @@ int vtkAnnotationROIRepresentation::HasTranslucentPolygonalGeometry()
 //----------------------------------------------------------------------------
 int vtkAnnotationROIRepresentation::RenderOverlay(vtkViewport *v)
 {
+  this->Modified();
   this->BuildRepresentation();
   int count = this->Superclass::RenderOverlay(v);
 
@@ -1278,8 +1293,12 @@ int vtkAnnotationROIRepresentation::RenderOverlay(vtkViewport *v)
   for (vtkProp* prop= 0;
        (prop= vtkProp::SafeDownCast(props->GetNextProp()));)
     {
-    count += prop->RenderOverlay(v);
+    if (prop->GetVisibility())
+      {
+      count += prop->RenderOverlay(v);
+      }
     }
+
   return count;
 }
 
@@ -1333,15 +1352,23 @@ void vtkAnnotationROIRepresentation::PositionHandles()
 #undef VTK_AVERAGE
 
 //----------------------------------------------------------------------------
-void vtkAnnotationROIRepresentation::SizeHandles()
+double vtkAnnotationROIRepresentation
+::ComputeHandleRadiusInWorldCoordinates(double vtkNotUsed(radInPixels))
 {
-  double *center 
+  double *center
     = static_cast<vtkDoubleArray *>(this->Points->GetData())->GetPointer(3*14);
   double radius =
       this->vtkWidgetRepresentation::SizeHandlesInPixels(1.5,center);
+  return radius;
+}
+
+//----------------------------------------------------------------------------
+void vtkAnnotationROIRepresentation::SizeHandles()
+{
+  double radius = this->ComputeHandleRadiusInWorldCoordinates(this->HandleSize);
   for(int i=0; i<7; i++)
     {
-    this->HandleGeometry[i]->SetRadius(this->Handle[i]->GetVisibility()*radius);
+    this->HandleGeometry[i]->SetRadius(radius);
     }
 }
 

@@ -152,29 +152,9 @@ vtkAbstractWidget * vtkMRMLAnnotationROIDisplayableManager::CreateWidget(vtkMRML
   roiWidget->SetRotationEnabled(0);
   roiWidget->CreateDefaultRepresentation();
 
-  vtkAnnotationROIRepresentation *boxRepresentation =
-      vtkAnnotationROIRepresentation::SafeDownCast(roiWidget->GetRepresentation());
-  boxRepresentation->SetPlaceFactor(1.0);
-
   this->PropagateMRMLToWidget(node, roiWidget);
 
-  if (this->Is2DDisplayableManager())
-    {
-    vtkNew<vtkPropCollection> actors;
-    boxRepresentation->GetActors2D(actors.GetPointer());
-    for (int i=0; i<actors->GetNumberOfItems(); i++)
-      {
-      this->GetRenderer()->AddActor2D(vtkProp::SafeDownCast(actors->GetItemAsObject(i)));
-      }
-    }
-  else
-    {
-    roiWidget->SetCurrentRenderer(this->GetRenderer());
-
-    boxRepresentation->NeedToRenderOn();
-
-    }
-
+  //roiWidget->SetCurrentRenderer(this->GetRenderer());
   roiWidget->On();
 
   return roiWidget;
@@ -225,23 +205,11 @@ void vtkMRMLAnnotationROIDisplayableManager::OnMRMLSceneNodeRemoved(vtkMRMLNode*
     {
     return;
     }
-
-  if (this->Is2DDisplayableManager())
+  vtkAnnotationROIWidget* roiWidget = vtkAnnotationROIWidget::SafeDownCast(
+    this->Helper->GetWidget(annotationNode));
+  if (roiWidget)
     {
-    vtkAnnotationROIWidget2D* roiWidget = vtkAnnotationROIWidget2D::SafeDownCast(this->Helper->GetWidget(annotationNode));
-    vtkAnnotationROIRepresentation2D* rep = vtkAnnotationROIRepresentation2D::SafeDownCast(
-      roiWidget ? roiWidget->GetRepresentation() : 0);
-
-    if (rep)
-      {
-      // update actor's visbility from mrml
-      vtkNew<vtkPropCollection> actors;
-      rep->GetActors2D(actors.GetPointer());
-      for (int i=0; i<actors->GetNumberOfItems(); i++)
-        {
-        this->GetRenderer()->RemoveActor2D(vtkProp::SafeDownCast(actors->GetItemAsObject(i)));
-        }
-      }
+    roiWidget->SetEnabled(0);
     }
 
   this->Superclass::OnMRMLSceneNodeRemoved(node);
@@ -294,13 +262,6 @@ void vtkMRMLAnnotationROIDisplayableManager::PropagateMRMLToWidget(vtkMRMLAnnota
     return;
     }
 
-  if (this->Is2DDisplayableManager())
-    {
-    this->PropagateMRMLToWidget2D(node, widget);
-    return;
-    }
-
-
   // cast to the specific widget
   vtkAnnotationROIWidget* roiWidget = vtkAnnotationROIWidget::SafeDownCast(widget);
 
@@ -337,20 +298,14 @@ void vtkMRMLAnnotationROIDisplayableManager::PropagateMRMLToWidget(vtkMRMLAnnota
   // disable processing of modified events
   this->m_Updating = 1;
 
-
-  // handle ROI transform to world space
-  vtkNew<vtkMatrix4x4> transformToWorld;
-  transformToWorld->Identity();
-
-  vtkMRMLTransformNode* tnode = roiNode->GetParentTransformNode();
-  if (tnode != NULL && tnode->IsLinear())
+  if (this->Is2DDisplayableManager())
     {
-    vtkMRMLLinearTransformNode *lnode = vtkMRMLLinearTransformNode::SafeDownCast(tnode);
-    lnode->GetMatrixTransformToWorld(transformToWorld.GetPointer());
+    this->Update2DTransform(roiNode, vtkAnnotationROIWidget2D::SafeDownCast(roiWidget));
     }
-  transformToWorld->Invert();
-
-  rep->SetWorldToLocalMatrix(transformToWorld.GetPointer());
+  else
+    {
+    this->Update3DTransform(roiNode, roiWidget);
+    }
 
   // update widget from mrml
   double xyz[3];
@@ -374,96 +329,48 @@ void vtkMRMLAnnotationROIDisplayableManager::PropagateMRMLToWidget(vtkMRMLAnnota
 
   rep->PlaceWidget(b);
   rep->SetHandleVisibility(!roiNode->GetLocked());
-
-  //this->SetParentTransformToWidget(roiNode, roiWidget);
-
   widget->SetEnabled(roiNode->GetDisplayVisibility());
-  widget->Modified();
-
-  // re-render the widget
-  rep->NeedToRenderOn();
+  widget->InvokeEvent(vtkCommand::EndInteractionEvent);
 
   // enable processing of modified events
   this->m_Updating = 0;
 }
 
 //---------------------------------------------------------------------------
-/// Propagate properties of MRML node to widget.
-void vtkMRMLAnnotationROIDisplayableManager::PropagateMRMLToWidget2D(vtkMRMLAnnotationNode* node, vtkAbstractWidget * widget)
+void vtkMRMLAnnotationROIDisplayableManager
+::Update3DTransform(vtkMRMLAnnotationROINode* roiNode,
+                    vtkAnnotationROIWidget* widget)
 {
-  vtkMRMLSliceNode *sliceNode = this->GetSliceNode();
-  if (!sliceNode)
+  // handle ROI transform to world space
+  vtkNew<vtkMatrix4x4> transformToWorld;
+  vtkMRMLLinearTransformNode* lnode = vtkMRMLLinearTransformNode::SafeDownCast(
+    roiNode->GetParentTransformNode());
+  if (lnode)
     {
-    return;
+    lnode->GetMatrixTransformToWorld(transformToWorld.GetPointer());
     }
+  transformToWorld->Invert();
 
-  // cast to the specific widget
-  vtkAnnotationROIWidget2D* roiWidget = vtkAnnotationROIWidget2D::SafeDownCast(widget);
+  vtkAnnotationROIRepresentation* rep =
+    vtkAnnotationROIRepresentation::SafeDownCast(widget->GetRepresentation());
+  rep->SetWorldToLocalMatrix(transformToWorld.GetPointer());
+}
 
-  if (!roiWidget)
-    {
-    // commented out by Fedorov: fails too often in ChangeTracker workflow
-    //vtkErrorMacro("PropagateMRMLToWidget: Could not get box widget!")
-    return;
-    }
-
-  // cast to the specific mrml node
-  vtkMRMLAnnotationROINode* roiNode = vtkMRMLAnnotationROINode::SafeDownCast(node);
-
-  if (!roiNode)
-    {
-    vtkErrorMacro("PropagateMRMLToWidget: Could not get ROI node!")
-    return;
-    }
-
-  if (this->m_Updating)
-    {
-    vtkDebugMacro("PropagateMRMLToWidget: Updating in progress.. Exit now.")
-    return;
-    }
-
-
-  // now get the widget properties (coordinates, measurement etc.) and if the mrml node has changed, propagate the changes
-  vtkAnnotationROIRepresentation2D * rep = vtkAnnotationROIRepresentation2D::SafeDownCast(roiWidget->GetRepresentation());
-
-  if (!rep)
-    {
-    return;
-    }
-
-  // disable processing of modified events
-  this->m_Updating = 1;
-
-  // update widget from mrml
-  double xyz[3];
-  double rxyz[3];
-  roiNode->GetXYZ(xyz);
-  roiNode->GetRadiusXYZ(rxyz);
-
-  double bounds[6];
-  for (int i=0; i<3; i++)
-    {
-    bounds[  i] = xyz[i]-rxyz[i];
-    bounds[3+i] = xyz[i]+rxyz[i];
-    }
-  double b[6];
-  b[0] = bounds[0];
-  b[1] = bounds[3];
-  b[2] = bounds[1];
-  b[3] = bounds[4];
-  b[4] = bounds[2];
-  b[5] = bounds[5];
-
-  //this->SetParentTransformToWidget(roiNode, roiWidget);
+//---------------------------------------------------------------------------
+void vtkMRMLAnnotationROIDisplayableManager
+::Update2DTransform(vtkMRMLAnnotationROINode* roiNode,
+                    vtkAnnotationROIWidget2D* widget)
+{
+  vtkMRMLSliceNode* sliceNode = this->GetSliceNode();
+  vtkAnnotationROIRepresentation2D* rep =
+    vtkAnnotationROIRepresentation2D::SafeDownCast(widget->GetRepresentation());
 
   // handle ROI transform to world space
   vtkNew<vtkMatrix4x4> transformToWorld;
-  transformToWorld->Identity();
-
-  vtkMRMLTransformNode* tnode = roiNode->GetParentTransformNode();
-  if (tnode != NULL && tnode->IsLinear())
+  vtkMRMLLinearTransformNode* lnode = vtkMRMLLinearTransformNode::SafeDownCast(
+    roiNode->GetParentTransformNode());
+  if (lnode)
     {
-    vtkMRMLLinearTransformNode *lnode = vtkMRMLLinearTransformNode::SafeDownCast(tnode);
     lnode->GetMatrixTransformToWorld(transformToWorld.GetPointer());
     }
 
@@ -478,7 +385,6 @@ void vtkMRMLAnnotationROIDisplayableManager::PropagateMRMLToWidget2D(vtkMRMLAnno
   XYToWorld->Multiply4x4(rasToXY.GetPointer(), transformToWorld.GetPointer(), XYToWorld.GetPointer());
 
   vtkSmartPointer<vtkTransform> transform = rep->GetWorldToDisplayTransform();
-
   transform->SetMatrix(XYToWorld.GetPointer());
 
   //
@@ -489,78 +395,43 @@ void vtkMRMLAnnotationROIDisplayableManager::PropagateMRMLToWidget2D(vtkMRMLAnno
   rasToXY->DeepCopy(sliceNode->GetXYToRAS());
 
   vtkNew<vtkMatrix4x4> mat;
-  mat->Identity();
   mat->Multiply4x4(transformToWorld.GetPointer(), rasToXY.GetPointer(), mat.GetPointer());
   rasToXY->DeepCopy(mat.GetPointer());
+  this->SetSlicePlaneFromMatrix(rasToXY.GetPointer(), rep->GetIntersectionPlane());
+}
 
-  double normal[4]={0,0,0,1};
-  double origin[4]={0,0,0,1};
+//---------------------------------------------------------------------------
+void vtkMRMLAnnotationROIDisplayableManager
+::SetSlicePlaneFromMatrix(vtkMatrix4x4 *sliceMatrix, vtkPlane* plane)
+{
+  double normal[3];
+  double origin[3];
   double sum = 0;
-  int i;
 
-  for (i=0; i<3; i++)
+  // +/-1: orientation of the normal
+  const int planeOrientation = 1;
+  for (int i = 0; i < 3; i++)
     {
-    normal[i] = rasToXY->GetElement(i, 2);
-    origin[i] = rasToXY->GetElement(i, 3);
-    }
-  for (i=0; i<3; i++)
-    {
+    normal[i] = planeOrientation * sliceMatrix->GetElement(i,2);
     sum += normal[i]*normal[i];
+    origin[i] = sliceMatrix->GetElement(i,3);
     }
 
-  double lenInv = 1./sqrt(sum);
-  for (i=0; i<3; i++)
+  double lenInv = (sum != 0.) ? 1./sqrt(sum) : 0.;
+  for (int i=0; i<3; i++)
     {
     normal[i] = normal[i]*lenInv;
     }
 
-  vtkPlane *plane = rep->GetIntersectionPlane();
-
   plane->SetNormal(normal);
   plane->SetOrigin(origin);
-
-  rep->SetHandleVisibility(roiNode->GetLocked()==0 && roiNode->GetDisplayVisibility() ? 1:0);
-
-  rep->PlaceWidget(b);
-
-  // update actor's visbility from mrml
-
-  vtkNew<vtkPropCollection> actors;
-  rep->GetActors2D(actors.GetPointer());
-  for (int i=0; i<actors->GetNumberOfItems(); i++)
-    {
-    vtkProp::SafeDownCast(actors->GetItemAsObject(i))->SetVisibility(roiNode->GetDisplayVisibility());
-    }
-
-  // re-render the widget
-  rep->NeedToRenderOn();
-
-  roiWidget->Modified();
-
-  // enable processing of modified events
-  this->m_Updating = 0;
-
-
-
-  return;
 }
+
 
 //---------------------------------------------------------------------------
 /// Propagate properties of widget to MRML node.
 void vtkMRMLAnnotationROIDisplayableManager::PropagateWidgetToMRML(vtkAbstractWidget * widget, vtkMRMLAnnotationNode* node)
 {
-  if (!widget)
-    {
-    vtkErrorMacro("PropagateWidgetToMRML: Widget was null!")
-    return;
-    }
-
-  if (!node)
-    {
-    vtkErrorMacro("PropagateWidgetToMRML: MRML node was null!")
-    return;
-    }
-
   // cast to the specific widget
   vtkAnnotationROIWidget* roiWidget = vtkAnnotationROIWidget::SafeDownCast(widget);
 
@@ -589,8 +460,10 @@ void vtkMRMLAnnotationROIDisplayableManager::PropagateWidgetToMRML(vtkAbstractWi
   this->m_Updating = 1;
   int disabledModify = roiNode->StartModify();
 
-  // now get the widget properties (coordinates, measurement etc.) and save it to the mrml node
-  vtkAnnotationROIRepresentation * rep = vtkAnnotationROIRepresentation::SafeDownCast(roiWidget->GetRepresentation());
+  // Get the widget properties (coordinates, measurement etc.) and save it
+  // to the mrml node
+  vtkAnnotationROIRepresentation * rep =
+    vtkAnnotationROIRepresentation::SafeDownCast(roiWidget->GetRepresentation());
 
   double extents[3];
   double center[3];
@@ -607,8 +480,6 @@ void vtkMRMLAnnotationROIDisplayableManager::PropagateWidgetToMRML(vtkAbstractWi
 
   // enable processing of modified events
   roiNode->EndModify(disabledModify);
-
-  //roiNode->GetScene()->InvokeEvent(vtkCommand::ModifiedEvent, roiNode);
 
   // This displayableManager should now consider ModifiedEvent again
   this->m_Updating = 0;
@@ -715,13 +586,10 @@ void vtkMRMLAnnotationROIDisplayableManager::SetParentTransformToWidget(vtkMRMLA
   vtkAnnotationROIRepresentation *rep = vtkAnnotationROIRepresentation::SafeDownCast(widget->GetRepresentation());
 
   vtkNew<vtkMatrix4x4> transformToWorld;
-  transformToWorld->Identity();
-
-  // get the nodes's transform node
-  vtkMRMLTransformNode* tnode = node->GetParentTransformNode();
-  if (rep != NULL && tnode != NULL && tnode->IsLinear())
+  vtkMRMLLinearTransformNode* lnode = vtkMRMLLinearTransformNode::SafeDownCast(
+    node->GetParentTransformNode());
+  if (lnode)
     {
-    vtkMRMLLinearTransformNode *lnode = vtkMRMLLinearTransformNode::SafeDownCast(tnode);
     lnode->GetMatrixTransformToWorld(transformToWorld.GetPointer());
     }
 
