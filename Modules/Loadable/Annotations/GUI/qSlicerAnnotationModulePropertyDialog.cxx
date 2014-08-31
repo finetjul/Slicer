@@ -55,6 +55,7 @@ qSlicerAnnotationModulePropertyDialog::qSlicerAnnotationModulePropertyDialog(con
   ui.DescriptionLabel->setVisible(true);
   ui.DescriptionTextEdit->setVisible(true);
   ui.lineTickSpacingSlider->setSynchronizeSiblings(ctkSliderWidget::SynchronizeWidth);
+  ui.textScaleSliderSpinBoxWidget->setMRMLScene(this->m_logic->GetMRMLScene());
 
   if (this->m_logic->IsAnnotationHierarchyNode(id))
     {
@@ -290,7 +291,6 @@ void qSlicerAnnotationModulePropertyDialog::initialize()
   QColor unselectedQColor;
   qMRMLUtils::colorToQColor(unselectedColor,unselectedQColor);
 
-  ui.textUnselectedColorPickerButton->setDisplayColorName(false);
   ui.textUnselectedColorPickerButton->setColor(unselectedQColor);
   ui.textUnselectedColorPickerButton->setDialogOptions(ctkColorPickerButton::UseCTKColorDialog);
 
@@ -300,7 +300,6 @@ void qSlicerAnnotationModulePropertyDialog::initialize()
   QColor selectedQColor;
   qMRMLUtils::colorToQColor(selectedColor,selectedQColor);
 
-  ui.textSelectedColorPickerButton->setDisplayColorName(false);
   ui.textSelectedColorPickerButton->setColor(selectedQColor);
   ui.textSelectedColorPickerButton->setDialogOptions(ctkColorPickerButton::UseCTKColorDialog);
 
@@ -359,7 +358,6 @@ void qSlicerAnnotationModulePropertyDialog::initialize()
     double *pointUnSelColor = pointDisplayNode->GetColor();
     QColor pointUnSelQColor;
     qMRMLUtils::colorToQColor(pointUnSelColor,pointUnSelQColor);
-    ui.pointUnselectedColorPickerButton->setDisplayColorName(false);
     ui.pointUnselectedColorPickerButton->setColor(pointUnSelQColor);
     ui.pointUnselectedColorPickerButton->setDialogOptions(ctkColorPickerButton::UseCTKColorDialog);
 
@@ -367,7 +365,6 @@ void qSlicerAnnotationModulePropertyDialog::initialize()
     double *pointSelColor = pointDisplayNode->GetSelectedColor();
     QColor pointSelQColor;
     qMRMLUtils::colorToQColor(pointSelColor, pointSelQColor);
-    ui.pointSelectedColorPickerButton->setDisplayColorName(false);
     ui.pointSelectedColorPickerButton->setColor(pointSelQColor);
     ui.pointSelectedColorPickerButton->setDialogOptions(ctkColorPickerButton::UseCTKColorDialog);
 
@@ -442,7 +439,6 @@ void qSlicerAnnotationModulePropertyDialog::initialize()
     double *lineUnSelColor = lineDisplayNode->GetColor();
     QColor lineUnSelQColor;
     qMRMLUtils::colorToQColor(lineUnSelColor,lineUnSelQColor);
-    ui.lineUnselectedColorPickerButton->setDisplayColorName(false);
     ui.lineUnselectedColorPickerButton->setColor(lineUnSelQColor);
     ui.lineUnselectedColorPickerButton->setDialogOptions(ctkColorPickerButton::UseCTKColorDialog);
 
@@ -450,7 +446,6 @@ void qSlicerAnnotationModulePropertyDialog::initialize()
     double *lineSelColor = lineDisplayNode->GetSelectedColor();
     QColor lineSelQColor;
     qMRMLUtils::colorToQColor(lineSelColor, lineSelQColor);
-    ui.lineSelectedColorPickerButton->setDisplayColorName(false);
     ui.lineSelectedColorPickerButton->setColor(lineSelQColor);
     ui.lineSelectedColorPickerButton->setDialogOptions(ctkColorPickerButton::UseCTKColorDialog);
 
@@ -458,7 +453,7 @@ void qSlicerAnnotationModulePropertyDialog::initialize()
     ui.lineWidthSliderSpinBoxWidget_2->setValue(lineDisplayNode->GetLineThickness());
 
     // label position
-    ui.lineLabelPositionSliderSpinBoxWidget->setValue(lineDisplayNode->GetLabelPosition());
+    ui.lineLabelPositionSliderSpinBoxWidget->setValue(lineDisplayNode->GetLabelPosition() * 100.);
     // label visibility
     ui.lineLabelVisibilityCheckBox->setChecked(lineDisplayNode->GetLabelVisibility());
     // tick spacing
@@ -1210,7 +1205,7 @@ void qSlicerAnnotationModulePropertyDialog::onLineLabelPositionChanged(double va
     {
     lineDisplayNode->GetScene()->SaveStateForUndo(lineDisplayNode);
     }
-  lineDisplayNode->SetLabelPosition(value);
+  lineDisplayNode->SetLabelPosition(value / 100.);
 }
 
 //------------------------------------------------------------------------------

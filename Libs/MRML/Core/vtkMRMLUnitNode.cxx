@@ -181,7 +181,7 @@ double vtkMRMLUnitNode::GetDisplayValueFromValue(double value)
 //----------------------------------------------------------------------------
 double vtkMRMLUnitNode::GetValueFromDisplayValue(double value)
 {
-  if (this->DisplayCoefficient)
+  if (this->DisplayCoefficient == 0.)
     {
     vtkWarningMacro("Invalid display coefficient");
     return 0.;
@@ -226,7 +226,7 @@ const char* vtkMRMLUnitNode::GetDisplayStringFormat()
   strstream << "#"; // force decimal point
   strstream << floor(log10(1. + fabs(this->GetMaximumValue()))); // padd
   strstream << "." << this->GetPrecision(); // decimals
-  strstream << "g";
+  strstream << "f"; // if it is too long, then maybe scaling should be applied
   strstream << this->Suffix;
   strstream >> this->LastDisplayString;
   return this->LastDisplayString.c_str();

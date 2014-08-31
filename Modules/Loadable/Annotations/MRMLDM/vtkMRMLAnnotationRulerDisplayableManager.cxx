@@ -644,7 +644,7 @@ std::string vtkMRMLAnnotationRulerDisplayableManager
     return "";
     }
 
-  std::string format = "%-#6.3g mm";
+  std::string format = "%-#6.3f mm";
   if (this->GetMRMLScene())
     {
     vtkMRMLSelectionNode* selectionNode = vtkMRMLSelectionNode::SafeDownCast(

@@ -21,6 +21,9 @@
 #ifndef __qMRMLSliderWidget_h
 #define __qMRMLSliderWidget_h
 
+// Qt includes
+#include <QMetaType>
+
 // CTK includes
 #include <ctkSliderWidget.h>
 #include <ctkVTKObject.h>
@@ -63,6 +66,9 @@ class QMRML_WIDGETS_EXPORT qMRMLSliderWidget : public ctkSliderWidget
   // \sa setQuantity(), quantity()
   Q_PROPERTY(QString quantity READ quantity WRITE setQuantity)
 
+  /// \deprecated
+  /// Use display* instead.
+  ///
   /// Get/Set the properties that will be determined by units.
   /// If a property is aware of units, it will update itself to the unit's
   /// property value automaticaly. Otherwise, this property is left to be
@@ -70,8 +76,22 @@ class QMRML_WIDGETS_EXPORT qMRMLSliderWidget : public ctkSliderWidget
   /// are on by default.
   /// \sa setQuantity(), quantity()
   // \sa setUnitAwareProperties(), unitAwareProperties()
-  Q_FLAGS(UnitAwareProperty UnitAwareProperties)
-  Q_PROPERTY(UnitAwareProperties unitAwareProperties READ unitAwareProperties WRITE setUnitAwareProperties)
+  Q_FLAGS(UnitAwareProperties)
+  Q_PROPERTY(UnitAwareProperties unitAwareProperties READ unitAwareProperties WRITE setUnitAwareProperties NOTIFY unitAwarePropertiesChanged)
+
+  Q_FLAGS(DisplayTypes)
+  /// UseUnitDefault by default.
+  Q_PROPERTY(DisplayTypes displayDecimals READ displayDecimals WRITE setDisplayDecimals)
+  /// UseUnitScale by default.
+  Q_PROPERTY(DisplayTypes displayMinimum READ displayMinimum WRITE setDisplayMinimum)
+  /// UseUnitScale by default.
+  Q_PROPERTY(DisplayTypes displayMaximum READ displayMaximum WRITE setDisplayMaximum)
+  /// UseUnitScale by default.
+  Q_PROPERTY(DisplayTypes displayValue READ displayValue WRITE setDisplayValue)
+  /// UseUnitDefault by default.
+  Q_PROPERTY(DisplayTypes displayPrefix READ displayPrefix WRITE setDisplayPrefix)
+  /// UseUnitDefault by default.
+  Q_PROPERTY(DisplayTypes displaySuffix READ displaySuffix WRITE setDisplaySuffix)
 
 public:
   typedef ctkSliderWidget Superclass;
@@ -79,6 +99,17 @@ public:
   /// Construct an empty qMRMLSliderWidget with a null scene.
   explicit qMRMLSliderWidget(QWidget* parent = 0);
   virtual ~qMRMLSliderWidget();
+
+  enum DisplayType
+    {
+    IgnoreUnit = 0x00,
+    UseUnitDefault = 0x01,
+    UseUnitScale = 0x02,
+    Zero = 0x04,
+    One = 0x08,
+    UseDefaultValueOrderOfMagnitudePlus2 = 0x10
+    };
+  Q_DECLARE_FLAGS(DisplayTypes, DisplayType)
 
   enum UnitAwareProperty
     {
@@ -105,6 +136,19 @@ public:
   /// \sa unitAwareProperties
   UnitAwareProperties unitAwareProperties()const;
 
+  DisplayTypes displayDecimals()const;
+  void setDisplayDecimals(DisplayTypes flags);
+  DisplayTypes displayMinimum()const;
+  void setDisplayMinimum(DisplayTypes flags);
+  DisplayTypes displayMaximum()const;
+  void setDisplayMaximum(DisplayTypes flags);
+  DisplayTypes displayValue()const;
+  void setDisplayValue(DisplayTypes flags);
+  DisplayTypes displayPrefix()const;
+  void setDisplayPrefix(DisplayTypes flags);
+  DisplayTypes displaySuffix()const;
+  void setDisplaySuffix(DisplayTypes flags);
+
   /// Reimplemented for internal reasons.
   /// \sa ctkSliderWidget::setMinimum(), ctkSliderWidget::setMaximum(),
   /// ctkSliderWidget::setRange()
@@ -121,8 +165,12 @@ public slots:
 
   void setUnitAwareProperties(UnitAwareProperties flags);
 
+Q_SIGNALS:
+  void unitAwarePropertiesChanged();
+
 protected slots:
-  void updateWidgetFromUnitNode();
+  virtual void initWidgetFromUnitNode();
+  virtual void updateWidgetFromUnitNode();
 
 protected:
   QScopedPointer<qMRMLSliderWidgetPrivate> d_ptr;
@@ -133,5 +181,6 @@ private:
 };
 
 Q_DECLARE_OPERATORS_FOR_FLAGS(qMRMLSliderWidget::UnitAwareProperties)
+Q_DECLARE_OPERATORS_FOR_FLAGS(qMRMLSliderWidget::DisplayTypes)
 
 #endif

@@ -20,6 +20,9 @@
 #include <vtkVersion.h>
 #include <vtkWindow.h>
 
+// STD includes
+#include <algorithm>
+
 //---------------------------------------------------------------------------
 vtkStandardNewMacro (vtkAnnotationRulerRepresentation3D);
 
@@ -85,6 +88,9 @@ void vtkAnnotationRulerRepresentation3D::BuildRepresentation()
     // Label
     char string[512];
     sprintf(string, this->LabelFormat, this->Distance);
+    // \hack vtkVectorText does not support unicode.
+    // \todo use vtkTextActor3D ?
+    std::replace(string, string + strlen(string), 'µ', 'u');
     this->LabelText->SetText(string);
     this->UpdateLabelActorPosition();
     if (this->Renderer) //make the label face the camera

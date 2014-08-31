@@ -56,6 +56,7 @@ set(TEST_SOURCES
   qMRMLSliceControllerWidgetTest.cxx
   qMRMLSliceWidgetTest1.cxx
   qMRMLSliceWidgetTest2.cxx
+  qMRMLSliderWidgetTest.cxx
   qMRMLTransformSlidersTest1.cxx
   qMRMLThreeDViewTest1.cxx
   qMRMLThreeDWidgetTest1.cxx
@@ -121,6 +122,7 @@ QT4_GENERATE_MOCS(
   qMRMLNodeAttributeTableWidgetTest.cxx
   qMRMLSceneModelTest.cxx
   qMRMLSliceControllerWidgetTest.cxx
+  qMRMLSliderWidgetTest.cxx
   )
 
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
@@ -187,6 +189,7 @@ SCENE_TEST(  qMRMLSceneDisplayableModelTest2 vol_and_cube.mrml )
 simple_test( qMRMLSliceControllerWidgetTest )
 SCENE_TEST( qMRMLSliceWidgetTest1 vol_and_cube.mrml)
 SCENE_TEST( qMRMLSliceWidgetTest2 TestData/fixed.nrrd)
+simple_test( qMRMLSliderWidgetTest )
 simple_test( qMRMLTransformSlidersTest1 )
 simple_test( qMRMLThreeDViewTest1 )
 simple_test( qMRMLThreeDWidgetTest1 )
