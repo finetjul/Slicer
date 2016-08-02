@@ -54,7 +54,8 @@ public:
   int Index;
 
   enum {
-    SetupMethod = 0
+    SetupMethod = 0,
+    HideMethod
     };
 
   mutable qSlicerPythonCppAPI PythonCppAPI;
@@ -72,6 +73,7 @@ qSlicerScriptedLoadableModulePrivate::qSlicerScriptedLoadableModulePrivate()
   this->Index = -1;
 
   this->PythonCppAPI.declareMethod(Self::SetupMethod, "setup");
+  this->PythonCppAPI.declareMethod(Self::HideMethod, "hide");
 }
 
 //-----------------------------------------------------------------------------
@@ -292,7 +294,12 @@ CTK_SET_CPP(qSlicerScriptedLoadableModule, const QIcon&, setIcon, Icon)
 CTK_GET_CPP(qSlicerScriptedLoadableModule, QIcon, icon, Icon)
 
 //-----------------------------------------------------------------------------
-CTK_SET_CPP(qSlicerScriptedLoadableModule, bool, setHidden, Hidden)
+void qSlicerScriptedLoadableModule::setHidden(bool hide)
+{
+  Q_D(qSlicerScriptedLoadableModule);
+  d->Hidden = hide;
+  d->PythonCppAPI.callMethod(Pimpl::HideMethod);
+}
 CTK_GET_CPP(qSlicerScriptedLoadableModule, bool, isHidden, Hidden)
 
 //-----------------------------------------------------------------------------
