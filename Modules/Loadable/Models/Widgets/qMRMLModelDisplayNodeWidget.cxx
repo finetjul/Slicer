@@ -260,6 +260,8 @@ void qMRMLModelDisplayNodeWidget::setActiveScalarName(const QString& arrayName)
     return;
     }
   d->MRMLModelDisplayNode->SetActiveScalarName(arrayName.toLatin1());
+  d->MRMLModelDisplayNode->SetActiveAttributeLocation(
+    d->ActiveScalarComboBox->currentArrayLocation());
 
   // if there's no color node set for a non empty array name, use a default
   if (!arrayName.isEmpty() &&
