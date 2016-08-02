@@ -205,6 +205,21 @@ vtkMRMLDisplayNode* vtkMRMLDisplayableNode::GetDisplayNode()
   return this->GetNthDisplayNode(0);
 }
 
+//----------------------------------------------------------------------------
+vtkMRMLDisplayNode* vtkMRMLDisplayableNode
+::GetNthDisplayNodeByClass(int n, const char* className)
+{
+  for (int i = 0; i < this->GetNumberOfDisplayNodes(); ++i)
+    {
+    vtkMRMLDisplayNode* displayNode = this->GetNthDisplayNode(i);
+    if (displayNode->IsA(className) && (n-- == 0))
+      {
+      return displayNode;
+      }
+    }
+  return 0;
+}
+
 //---------------------------------------------------------------------------
 void vtkMRMLDisplayableNode::ProcessMRMLEvents ( vtkObject *caller,
                                            unsigned long event,

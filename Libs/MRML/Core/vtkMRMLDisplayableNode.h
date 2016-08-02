@@ -149,6 +149,12 @@ public:
   /// \sa GetNthDisplayNode(int), GetDisplayNodeID()
   vtkMRMLDisplayNode* GetDisplayNode();
 
+  ///
+  /// Utility function that returns the nth display node of class \a className.
+  /// \sa GetNthDisplayNode()
+  vtkMRMLDisplayNode* GetNthDisplayNodeByClass(int n, const char* className);
+
+
   /// \deprecated GetDisplayNodes
   /// Obsolete utility function that provides an unsafe API.
   /// Please use GetNumberOfDisplayNodes() and
